@@ -27,6 +27,8 @@ val regulateDir = home / "src" / "main" / "component" / "isolette" / "Regulate"
 val sireumBin = Os.path(Os.env("SIREUM_HOME").get) / "bin" 
 val sireum = sireumBin / (if(Os.isWin) "sireum.bat" else "sireum")
 
+val collectStats = T
+
 val ignoreStringInterpWarnings: B = T // if T then ignore string interp warnings as the strings only appear in api.logInfo calls and not in contracts
 
 val isCi: B = Os.env("GITLAB_CI").nonEmpty || Os.env("GITHUB_ACTIONS").nonEmpty || Os.env("BUILD_ID").nonEmpty
@@ -43,7 +45,7 @@ val emptyMap = Map.empty[String, ExpectedReport] + (initialisePrefix ~> emptyRep
 @datatype class LogikaOpt (val timeout: Z,
                            val rlimit: Z)
 
-val defaultOpts = LogikaOpt(timeout = (if(isCi) 20 else 10), rlimit = 2000000)
+val defaultOpts = LogikaOpt(timeout = (if(isCi) 10 else 2), rlimit = 2000000)
 
 @datatype class C(val file: Os.Path,
                   val logikaOpts: LogikaOpt,
@@ -72,19 +74,29 @@ for(f <- files;
     entryPoint <- ISZ(initialisePrefix, timeTriggeredPrefix)) {
 
   val reporter = org.sireum.message.Reporter.create
-  val input = ISZ[String]("proyek", "logika",
+  var input = ISZ[String]("proyek", "logika",
     "--timeout", f.logikaOpts.timeout.string, //
     "--rlimit", f.logikaOpts.rlimit.string, //
     "--par",
-    "--line", findMethod(entryPoint, f.file).string, //
-    home.value, f.file.value)
+    "--par-branch",
+    "--par-branch-mode", "all",
+    "--line", findMethod(entryPoint, f.file).string)
+
+  if(collectStats) {
+    input = input :+ "--stats"
+    input = input :+ "--log-detailed-info"
+  }
+
+  input = input :+ home.value :+ f.file.value
 
   println(s"Checking $entryPoint method of ${f.file.name}")
-  println(st"sireum ${(input, " ")}".render)
+  println(st"$sireum ${(input, " ")}".render)
 
   val start = org.sireum.extension.Time.currentMillis
   val results = Sireum.runWithReporter(input, reporter)
-  val elapsed = s"in ${(org.sireum.extension.Time.currentMillis - start) / 1000} s"
+
+  val _elapsed = org.sireum.extension.Time.currentMillis - start
+  val elapsed = s"in ${_elapsed} ms"
 
   var report =  ISZ[String]()
 
@@ -110,6 +122,52 @@ for(f <- files;
     println(s"  Everything accounted for:")
   }
   println(s"  Verification ${if(results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
+
+  def writeToResults(key: String, value: String): Unit = {
+    val lresults = f.file.up / s".${f.file.name}.${entryPoint}.properties"
+    var props: Map[String, String] = if (!lresults.exists)
+      Map.empty[String, String]
+    else lresults.properties
+
+    props = props + key ~> value
+    val entries: ISZ[String] = ops.ISZOps(for (e <- props.entries) yield st"${e._1}=${e._2}".render).sortWith((a,b) => a < b)
+    lresults.writeOver(st"${(entries, "\n")}".render)
+  }
+
+  writeToResults("cliTime", _elapsed.string)
+
+  if(collectStats) {
+    def split(s: String): (Z, Z) = {
+      println(s)
+      val ss = ops.StringOps(s)
+      val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
+
+      val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
+      if (time.endsWith("s")) {
+        // (time 14.342s)
+        val _time = ops.StringOps(time.substring(0, time.size - 1))
+        val ms = st"${(_time.split(c => c == '.'))}".render
+        return (num, Z(ms).get)
+      } else {
+        // 1:12.419
+        val min = Z(time.substring(0, time.indexOf(':'))).get
+        val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
+        val mills = Z(rest).get
+        val ms = min * 60000 + mills
+        return (num, ms)
+      }
+    }
+    val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
+    val vcs = o.filter(f => ops.StringOps(f).contains("Number of SMT2 ver"))(0)
+    val sats = o.filter(f => ops.StringOps(f).contains("Number of SMT2 sat"))(0)
+    val (vcNum, vcTime) = split(vcs)
+    val (sNum, sTime) = split(sats)
+
+    writeToResults("vcsNum", vcNum.string)
+    writeToResults("vcsTime", vcTime.string)
+    writeToResults("satNum", sNum.string)
+    writeToResults("satTime", sTime.string)
+  }
 }
 
 Os.exit(result)

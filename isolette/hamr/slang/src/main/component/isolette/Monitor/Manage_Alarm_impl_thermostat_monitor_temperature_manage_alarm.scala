@@ -137,23 +137,23 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
 
     monitor_mode match {
       case Isolette_Data_Model.Monitor_Mode.Init_Monitor_Mode =>
-        // REQ_MRM_1
+        // REQ_MA_1
         currentCmd = Isolette_Data_Model.On_Off.Off
       case Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode =>
         if (currentTemp.value < lowerAlarm.value | currentTemp.value > upperAlarm.value) {
-          // REQ_MRM_2
+          // REQ_MA_2
           currentCmd = Isolette_Data_Model.On_Off.Onn
         }
         else if ((currentTemp.value < lowerAlarm.value + 0.5f) | (currentTemp.value > upperAlarm.value - 0.5f)) {
-          // REQ_MRM_3
+          // REQ_MA_3
           currentCmd = lastCmd
         }
         else {
-          // REQ_MRM_4
+          // REQ_MA_4
           currentCmd = Isolette_Data_Model.On_Off.Off
         }
       case Isolette_Data_Model.Monitor_Mode.Failed_Monitor_Mode =>
-        // REQ_MRM_5
+        // REQ_MA_5
         currentCmd = Isolette_Data_Model.On_Off.Onn
     }
     lastCmd = currentCmd
@@ -162,14 +162,14 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
 
     // use assert/deduce blocks to help SMT deduce the ensures/post-conditions
 
-    assert(( // REQ_MRM_2
+    assert(( // REQ_MA_2
       monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
         (currentTemp.value < lowerAlarm.value | currentTemp.value > upperAlarm.value))
       ->:
       (lastCmd == Isolette_Data_Model.On_Off.Onn))
 
     Deduce (
-      1 #> ((  // REQ_MRM_3
+      1 #> ((  // REQ_MA_3
         api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
           (api.current_tempWstatus.value >= api.lower_alarm_temp.value & api.current_tempWstatus.value <= api.upper_alarm_temp.value) &
           (api.current_tempWstatus.value < api.lower_alarm_temp.value + 0.5f | api.current_tempWstatus.value > api.upper_alarm_temp.value - 0.5f))
@@ -178,7 +178,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     )
 
    Deduce (
-     1 #> ((  // REQ_MRM_4
+     1 #> ((  // REQ_MA_4
        api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
          (api.current_tempWstatus.value >= api.lower_alarm_temp.value & api.current_tempWstatus.value <= api.upper_alarm_temp.value) &
          (api.current_tempWstatus.value >= api.lower_alarm_temp.value + 0.5f & api.current_tempWstatus.value <= api.upper_alarm_temp.value - 0.5f))
