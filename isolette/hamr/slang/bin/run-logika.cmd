@@ -70,106 +70,113 @@ println("Initializing runtime library ...\n")
 Sireum.initRuntimeLibrary()
 
 var result: Z = 0
-for(f <- files;
-    entryPoint <- ISZ(initialisePrefix, timeTriggeredPrefix)) {
+for(f <- files) {
+  val csv = f.file.up / s".${f.file.name}.csv"
+  csv.writeOver("entrypoint,cliTime,vcsNum,vcsTime,satNum,satTime\n")
 
-  val reporter = org.sireum.message.Reporter.create
-  var input = ISZ[String]("proyek", "logika",
-    "--timeout", f.logikaOpts.timeout.string, //
-    "--rlimit", f.logikaOpts.rlimit.string, //
-    "--par",
-    "--par-branch",
-    "--par-branch-mode", "all",
-    "--line", findMethod(entryPoint, f.file).string)
+  for (entryPoint <- ISZ(initialisePrefix, timeTriggeredPrefix)) {
 
-  if(collectStats) {
-    input = input :+ "--stats"
-    input = input :+ "--log-detailed-info"
-  }
+    val reporter = org.sireum.message.Reporter.create
+    var input = ISZ[String]("proyek", "logika",
+      "--timeout", f.logikaOpts.timeout.string, //
+      "--rlimit", f.logikaOpts.rlimit.string, //
+      "--par",
+      "--par-branch",
+      "--par-branch-mode", "all",
+      "--line", findMethod(entryPoint, f.file).string)
 
-  input = input :+ home.value :+ f.file.value
-
-  println(s"Checking $entryPoint method of ${f.file.name}")
-  println(st"$sireum ${(input, " ")}".render)
-
-  val start = org.sireum.extension.Time.currentMillis
-  val results = Sireum.runWithReporter(input, reporter)
-
-  val _elapsed = org.sireum.extension.Time.currentMillis - start
-  val elapsed = s"in ${_elapsed} ms"
-
-  var report =  ISZ[String]()
-
-  def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
-    if (expected.size != actual.size) {
-      report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
+    if (collectStats) {
+      input = input :+ "--stats"
+      input = input :+ "--log-detailed-info"
     }
-    @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
-    for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
-      report = report :+ s"  Unexpected $typ: ${m2s(m)}"
-    }
-  }
 
-  compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
-    !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
-  compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
+    input = input :+ home.value :+ f.file.value
 
-  if (report.nonEmpty) {
-    println(s"*** Failed ***\n")
-    println(st"${(report, "\n")}\n".render)
-    result = 1
-  } else {
-    println(s"  Everything accounted for:")
-  }
-  println(s"  Verification ${if(results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
+    println(s"Checking $entryPoint method of ${f.file.name}")
+    println(st"$sireum ${(input, " ")}".render)
 
-  def writeToResults(key: String, value: String): Unit = {
-    val lresults = f.file.up / s".${f.file.name}.${entryPoint}.properties"
-    var props: Map[String, String] = if (!lresults.exists)
-      Map.empty[String, String]
-    else lresults.properties
+    val start = org.sireum.extension.Time.currentMillis
+    val results = Sireum.runWithReporter(input, reporter)
 
-    props = props + key ~> value
-    val entries: ISZ[String] = ops.ISZOps(for (e <- props.entries) yield st"${e._1}=${e._2}".render).sortWith((a,b) => a < b)
-    lresults.writeOver(st"${(entries, "\n")}".render)
-  }
+    val _elapsed = org.sireum.extension.Time.currentMillis - start
+    val elapsed = s"in ${_elapsed} ms"
 
-  writeToResults("cliTime", _elapsed.string)
+    var report = ISZ[String]()
 
-  if(collectStats) {
-    def split(s: String): (Z, Z) = {
-      println(s)
-      val ss = ops.StringOps(s)
-      val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
+    def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
+      if (expected.size != actual.size) {
+        report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
+      }
 
-      val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
-      if (time.endsWith("s")) {
-        // (time 14.342s)
-        val _time = ops.StringOps(time.substring(0, time.size - 1))
-        val ms = st"${(_time.split(c => c == '.'))}".render
-        return (num, Z(ms).get)
-      } else {
-        // 1:12.419
-        val min = Z(time.substring(0, time.indexOf(':'))).get
-        val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
-        val mills = Z(rest).get
-        val ms = min * 60000 + mills
-        return (num, ms)
+      @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
+
+      for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
+        report = report :+ s"  Unexpected $typ: ${m2s(m)}"
       }
     }
-    val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
-    val vcs = o.filter(f => ops.StringOps(f).contains("Number of SMT2 ver"))(0)
-    val sats = o.filter(f => ops.StringOps(f).contains("Number of SMT2 sat"))(0)
-    val (vcNum, vcTime) = split(vcs)
-    val (sNum, sTime) = split(sats)
 
-    writeToResults("vcsNum", vcNum.string)
-    writeToResults("vcsTime", vcTime.string)
-    writeToResults("satNum", sNum.string)
-    writeToResults("satTime", sTime.string)
+    compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
+      !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
+    compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
+
+    if (report.nonEmpty) {
+      println(s"*** Failed ***\n")
+      println(st"${(report, "\n")}\n".render)
+      result = 1
+    } else {
+      println(s"  Everything accounted for:")
+    }
+    println(s"  Verification ${if (results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
+
+    def writeToResults(key: String, value: String): Unit = {
+      val lresults = f.file.up / s".${f.file.name}.${entryPoint}.properties"
+      var props: Map[String, String] = if (!lresults.exists)
+        Map.empty[String, String]
+      else lresults.properties
+
+      props = props + key ~> value
+      val entries: ISZ[String] = ops.ISZOps(for (e <- props.entries) yield st"${e._1}=${e._2}".render).sortWith((a, b) => a < b)
+      lresults.writeOver(st"${(entries, "\n")}".render)
+    }
+
+    //writeToResults("cliTime", _elapsed.string)
+
+    if (collectStats) {
+      def split(s: String): (Z, Z) = {
+        println(s)
+        val ss = ops.StringOps(s)
+        val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
+
+        val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
+        if (time.endsWith("s")) {
+          // (time 14.342s)
+          val _time = ops.StringOps(time.substring(0, time.size - 1))
+          val ms = st"${(_time.split(c => c == '.'))}".render
+          return (num, Z(ms).get)
+        } else {
+          // 1:12.419
+          val min = Z(time.substring(0, time.indexOf(':'))).get
+          val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
+          val mills = Z(rest).get
+          val ms = min * 60000 + mills
+          return (num, ms)
+        }
+      }
+
+      val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
+      val vcs = o.filter(f => ops.StringOps(f).contains("Number of SMT2 ver"))(0)
+      val sats = o.filter(f => ops.StringOps(f).contains("Number of SMT2 sat"))(0)
+      val (vcsNum, vcsTime) = split(vcs)
+      val (satNum, satTime) = split(sats)
+
+      //writeToResults("vcsNum", vcNum.string)
+      //writeToResults("vcsTime", vcTime.string)
+      //writeToResults("satNum", sNum.string)
+      //writeToResults("satTime", sTime.string)
+      csv.writeAppend(s"${entryPoint},${_elapsed},${vcsNum},${vcsTime},${satNum},${satTime}")
+    }
   }
 }
-
 Os.exit(result)
 
 def findMethod(key: String, f: Os.Path): Z = {
