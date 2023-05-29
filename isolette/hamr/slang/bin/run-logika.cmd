@@ -72,7 +72,9 @@ Sireum.initRuntimeLibrary()
 var result: Z = 0
 for(f <- files) {
   val csv = f.file.up / s".${f.file.name}.csv"
-  csv.writeOver("entrypoint,cliTime,vcsNum,vcsTime,satNum,satTime\n")
+  if(collectStats) {
+    csv.writeOver("entrypoint,cliTime,vcsNum,vcsTime,satNum,satTime\n")
+  }
 
   for (entryPoint <- ISZ(initialisePrefix, timeTriggeredPrefix)) {
 
@@ -128,19 +130,6 @@ for(f <- files) {
     }
     println(s"  Verification ${if (results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
 
-    def writeToResults(key: String, value: String): Unit = {
-      val lresults = f.file.up / s".${f.file.name}.${entryPoint}.properties"
-      var props: Map[String, String] = if (!lresults.exists)
-        Map.empty[String, String]
-      else lresults.properties
-
-      props = props + key ~> value
-      val entries: ISZ[String] = ops.ISZOps(for (e <- props.entries) yield st"${e._1}=${e._2}".render).sortWith((a, b) => a < b)
-      lresults.writeOver(st"${(entries, "\n")}".render)
-    }
-
-    //writeToResults("cliTime", _elapsed.string)
-
     if (collectStats) {
       def split(s: String): (Z, Z) = {
         println(s)
@@ -169,10 +158,6 @@ for(f <- files) {
       val (vcsNum, vcsTime) = split(vcs)
       val (satNum, satTime) = split(sats)
 
-      //writeToResults("vcsNum", vcNum.string)
-      //writeToResults("vcsTime", vcTime.string)
-      //writeToResults("satNum", sNum.string)
-      //writeToResults("satTime", sTime.string)
       csv.writeAppend(s"${entryPoint},${_elapsed},${vcsNum},${vcsTime},${satNum},${satTime}")
     }
   }
