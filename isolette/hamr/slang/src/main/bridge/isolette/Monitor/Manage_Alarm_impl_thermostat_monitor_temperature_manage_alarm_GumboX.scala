@@ -9,21 +9,18 @@ import isolette._
 object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
   /** Initialize Entrypoint Contract
     *
-    * guarantees alarmcontrolIsInitiallyOff
+    * guarantees REQ_MA_1
+    *   If the Monitor Mode is INIT, the Alarm Control shall be set
+    *   to Off.
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115 
+    * @param lastCmd post-state state variable
     * @param api_alarm_control outgoing data port
     */
-  @strictpure def initialize_alarmcontrolIsInitiallyOff (
+  @strictpure def initialize_REQ_MA_1 (
+      lastCmd: Isolette_Data_Model.On_Off.Type,
       api_alarm_control: Isolette_Data_Model.On_Off.Type): B =
-    api_alarm_control == Isolette_Data_Model.On_Off.Off
-
-  /** Initialize Entrypoint Contract
-    *
-    * guarantees lastCmdInitiallySetToOff
-    * @param lastCmd post-state state variable
-    */
-  @strictpure def initialize_lastCmdInitiallySetToOff (
-      lastCmd: Isolette_Data_Model.On_Off.Type): B =
-    lastCmd == Isolette_Data_Model.On_Off.Off
+    api_alarm_control == Isolette_Data_Model.On_Off.Off &
+      lastCmd == Isolette_Data_Model.On_Off.Off
 
   /** IEP-Guar: Initialize Entrypoint Contracts for manage_alarm
     *
@@ -33,8 +30,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
   @strictpure def initialize_IEP_Guar (
       lastCmd: Isolette_Data_Model.On_Off.Type,
       api_alarm_control: Isolette_Data_Model.On_Off.Type): B =
-    initialize_alarmcontrolIsInitiallyOff(api_alarm_control) &
-    initialize_lastCmdInitiallySetToOff(lastCmd)
+    initialize_REQ_MA_1(lastCmd, api_alarm_control)
 
   /** IEP-Post: Initialize Entrypoint Post-Condition
     *
@@ -79,8 +75,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
   /** Compute Entrypoint Contract
     *
     * assumes boundedValue
-    *   Appears to help SMT avoid inconsistent context. Interestingly a
-    *   range like (0.0f, 150.0f) doesn't help'
+    *   Appears to help SMT avoid inconsistent context.
     * @param api_upper_alarm_temp incoming data port
     */
   @strictpure def compute_spec_boundedValue_assume(
@@ -119,14 +114,15 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
     (// CEP-Assm: assume clauses of manage_alarm's compute entrypoint
      compute_CEP_T_Assm (api_current_tempWstatus, api_lower_alarm_temp, api_upper_alarm_temp))
 
-  /** guarantees REQ_MRM_1
+  /** guarantees REQ_MA_1
     *   If the Monitor Mode is INIT, the Alarm Control shall be set
     *   to Off.
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115 
     * @param lastCmd post-state state variable
     * @param api_monitor_mode incoming data port
     * @param api_alarm_control outgoing data port
     */
-  @strictpure def compute_case_REQ_MRM_1(
+  @strictpure def compute_case_REQ_MA_1(
       lastCmd: Isolette_Data_Model.On_Off.Type,
       api_monitor_mode: Isolette_Data_Model.Monitor_Mode.Type,
       api_alarm_control: Isolette_Data_Model.On_Off.Type): B =
@@ -134,10 +130,11 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
       (api_alarm_control == Isolette_Data_Model.On_Off.Off &
          lastCmd == Isolette_Data_Model.On_Off.Off)
 
-  /** guarantees REQ_MRM_2
+  /** guarantees REQ_MA_2
     *   If the Monitor Mode is NORMAL and the Current Temperature is
     *   less than the Lower Alarm Temperature or greater than the Upper Alarm
     *   Temperature, the Alarm Control shall be set to On.
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115 
     * @param lastCmd post-state state variable
     * @param api_current_tempWstatus incoming data port
     * @param api_lower_alarm_temp incoming data port
@@ -145,7 +142,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
     * @param api_upper_alarm_temp incoming data port
     * @param api_alarm_control outgoing data port
     */
-  @strictpure def compute_case_REQ_MRM_2(
+  @strictpure def compute_case_REQ_MA_2(
       lastCmd: Isolette_Data_Model.On_Off.Type,
       api_current_tempWstatus: Isolette_Data_Model.TempWstatus_impl,
       api_lower_alarm_temp: Isolette_Data_Model.Temp_impl,
@@ -158,13 +155,14 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
       (api_alarm_control == Isolette_Data_Model.On_Off.Onn &
          lastCmd == Isolette_Data_Model.On_Off.Onn)
 
-  /** guarantees REQ_MRM_3
+  /** guarantees REQ_MA_3
     *   If the Monitor Mode is NORMAL and the Current Temperature
     *   is greater than or equal to the Lower Alarm Temperature and less than
     *   the Lower Alarm Temperature +0.5 degrees, or the Current Temperature is
     *   greater than the Upper Alarm Temperature -0.5 degrees and less than or equal
     *   to the Upper Alarm Temperature, the value of the Alarm Control shall
     *   not be changed.
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115 
     * @param In_lastCmd pre-state state variable
     * @param lastCmd post-state state variable
     * @param api_current_tempWstatus incoming data port
@@ -173,7 +171,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
     * @param api_upper_alarm_temp incoming data port
     * @param api_alarm_control outgoing data port
     */
-  @strictpure def compute_case_REQ_MRM_3(
+  @strictpure def compute_case_REQ_MA_3(
       In_lastCmd: Isolette_Data_Model.On_Off.Type,
       lastCmd: Isolette_Data_Model.On_Off.Type,
       api_current_tempWstatus: Isolette_Data_Model.TempWstatus_impl,
@@ -189,11 +187,12 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
       (api_alarm_control == In_lastCmd &
          lastCmd == In_lastCmd)
 
-  /** guarantees REQ_MRM_4
+  /** guarantees REQ_MA_4
     *   If the Monitor Mode is NORMAL and the value of the Current
     *   Temperature is greater than or equal to the Lower Alarm Temperature
     *   +0.5 degrees and less than or equal to the Upper Alarm Temperature
     *   -0.5 degrees, the Alarm Control shall be set to Off.
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115 
     * @param lastCmd post-state state variable
     * @param api_current_tempWstatus incoming data port
     * @param api_lower_alarm_temp incoming data port
@@ -201,7 +200,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
     * @param api_upper_alarm_temp incoming data port
     * @param api_alarm_control outgoing data port
     */
-  @strictpure def compute_case_REQ_MRM_4(
+  @strictpure def compute_case_REQ_MA_4(
       lastCmd: Isolette_Data_Model.On_Off.Type,
       api_current_tempWstatus: Isolette_Data_Model.TempWstatus_impl,
       api_lower_alarm_temp: Isolette_Data_Model.Temp_impl,
@@ -214,14 +213,15 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
       (api_alarm_control == Isolette_Data_Model.On_Off.Off &
          lastCmd == Isolette_Data_Model.On_Off.Off)
 
-  /** guarantees REQ_MRM_5
+  /** guarantees REQ_MA_5
     *   If the Monitor Mode is FAILED, the Alarm Control shall be
     *   set to On.
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=116 
     * @param lastCmd post-state state variable
     * @param api_monitor_mode incoming data port
     * @param api_alarm_control outgoing data port
     */
-  @strictpure def compute_case_REQ_MRM_5(
+  @strictpure def compute_case_REQ_MA_5(
       lastCmd: Isolette_Data_Model.On_Off.Type,
       api_monitor_mode: Isolette_Data_Model.Monitor_Mode.Type,
       api_alarm_control: Isolette_Data_Model.On_Off.Type): B =
@@ -247,11 +247,11 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
       api_monitor_mode: Isolette_Data_Model.Monitor_Mode.Type,
       api_upper_alarm_temp: Isolette_Data_Model.Temp_impl,
       api_alarm_control: Isolette_Data_Model.On_Off.Type): B =
-    compute_case_REQ_MRM_1(lastCmd, api_monitor_mode, api_alarm_control) &
-    compute_case_REQ_MRM_2(lastCmd, api_current_tempWstatus, api_lower_alarm_temp, api_monitor_mode, api_upper_alarm_temp, api_alarm_control) &
-    compute_case_REQ_MRM_3(In_lastCmd, lastCmd, api_current_tempWstatus, api_lower_alarm_temp, api_monitor_mode, api_upper_alarm_temp, api_alarm_control) &
-    compute_case_REQ_MRM_4(lastCmd, api_current_tempWstatus, api_lower_alarm_temp, api_monitor_mode, api_upper_alarm_temp, api_alarm_control) &
-    compute_case_REQ_MRM_5(lastCmd, api_monitor_mode, api_alarm_control)
+    compute_case_REQ_MA_1(lastCmd, api_monitor_mode, api_alarm_control) &
+    compute_case_REQ_MA_2(lastCmd, api_current_tempWstatus, api_lower_alarm_temp, api_monitor_mode, api_upper_alarm_temp, api_alarm_control) &
+    compute_case_REQ_MA_3(In_lastCmd, lastCmd, api_current_tempWstatus, api_lower_alarm_temp, api_monitor_mode, api_upper_alarm_temp, api_alarm_control) &
+    compute_case_REQ_MA_4(lastCmd, api_current_tempWstatus, api_lower_alarm_temp, api_monitor_mode, api_upper_alarm_temp, api_alarm_control) &
+    compute_case_REQ_MA_5(lastCmd, api_monitor_mode, api_alarm_control)
 
   /** CEP-Post: Compute Entrypoint Post-Condition for manage_alarm
     *

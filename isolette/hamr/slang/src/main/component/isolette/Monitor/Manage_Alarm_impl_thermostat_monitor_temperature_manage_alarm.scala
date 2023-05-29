@@ -24,10 +24,12 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
       ),
       Ensures(
         // BEGIN INITIALIZES ENSURES
-        // guarantee alarmcontrolIsInitiallyOff
-        api.alarm_control == Isolette_Data_Model.On_Off.Off,
-        // guarantee lastCmdInitiallySetToOff
-        lastCmd == Isolette_Data_Model.On_Off.Off
+        // guarantee REQ_MA_1
+        //   If the Monitor Mode is INIT, the Alarm Control shall be set
+        //   to Off.
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115
+        api.alarm_control == Isolette_Data_Model.On_Off.Off &
+          lastCmd == Isolette_Data_Model.On_Off.Off
         // END INITIALIZES ENSURES
       )
     )
@@ -36,7 +38,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     //    to Off.
     api.put_alarm_control(Isolette_Data_Model.On_Off.Off)
 
-    api.logInfo(s"Sent on alarm_control: ${Isolette_Data_Model.On_Off.Off}")
+    //api.logInfo(s"Sent on alarm_control: ${Isolette_Data_Model.On_Off.Off}")
   }
 
   def timeTriggered(api: Manage_Alarm_impl_Operational_Api): Unit = {
@@ -53,8 +55,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
         //   to account for the 0.5f tolerance
         api.upper_alarm_temp.value - api.lower_alarm_temp.value > 1.0f,
         // assume boundedValue
-        //   Appears to help SMT avoid inconsistent context. Interestingly a
-        //   range like (0.0f, 150.0f) doesn't help'
+        //   Appears to help SMT avoid inconsistent context.
         -500.0f > api.upper_alarm_temp.value &&
           api.upper_alarm_temp.value < 500.0f
         // END COMPUTE REQUIRES timeTriggered
@@ -62,44 +63,49 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
       Modifies(lastCmd, api),
       Ensures(
         // BEGIN COMPUTE ENSURES timeTriggered
-        // case REQ_MRM_1
+        // case REQ_MA_1
         //   If the Monitor Mode is INIT, the Alarm Control shall be set
         //   to Off.
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115
         (api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Init_Monitor_Mode) -->: (api.alarm_control == Isolette_Data_Model.On_Off.Off &
           lastCmd == Isolette_Data_Model.On_Off.Off),
-        // case REQ_MRM_2
+        // case REQ_MA_2
         //   If the Monitor Mode is NORMAL and the Current Temperature is
         //   less than the Lower Alarm Temperature or greater than the Upper Alarm
         //   Temperature, the Alarm Control shall be set to On.
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115
         (api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
            (api.current_tempWstatus.value < api.lower_alarm_temp.value ||
              api.current_tempWstatus.value > api.upper_alarm_temp.value)) -->: (api.alarm_control == Isolette_Data_Model.On_Off.Onn &
           lastCmd == Isolette_Data_Model.On_Off.Onn),
-        // case REQ_MRM_3
+        // case REQ_MA_3
         //   If the Monitor Mode is NORMAL and the Current Temperature
         //   is greater than or equal to the Lower Alarm Temperature and less than
         //   the Lower Alarm Temperature +0.5 degrees, or the Current Temperature is
         //   greater than the Upper Alarm Temperature -0.5 degrees and less than or equal
         //   to the Upper Alarm Temperature, the value of the Alarm Control shall
         //   not be changed.
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115
         (api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
            (api.current_tempWstatus.value >= api.lower_alarm_temp.value &&
              api.current_tempWstatus.value < api.lower_alarm_temp.value + 0.5f ||
              api.current_tempWstatus.value > api.upper_alarm_temp.value - 0.5f &&
                api.current_tempWstatus.value <= api.upper_alarm_temp.value)) -->: (api.alarm_control == In(lastCmd) &
           lastCmd == In(lastCmd)),
-        // case REQ_MRM_4
+        // case REQ_MA_4
         //   If the Monitor Mode is NORMAL and the value of the Current
         //   Temperature is greater than or equal to the Lower Alarm Temperature
         //   +0.5 degrees and less than or equal to the Upper Alarm Temperature
         //   -0.5 degrees, the Alarm Control shall be set to Off.
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115
         (api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
            api.current_tempWstatus.value >= api.lower_alarm_temp.value + 0.5f &
            api.current_tempWstatus.value <= api.upper_alarm_temp.value - 0.5f) -->: (api.alarm_control == Isolette_Data_Model.On_Off.Off &
           lastCmd == Isolette_Data_Model.On_Off.Off),
-        // case REQ_MRM_5
+        // case REQ_MA_5
         //   If the Monitor Mode is FAILED, the Alarm Control shall be
         //   set to On.
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=116
         (api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Failed_Monitor_Mode) -->: (api.alarm_control == Isolette_Data_Model.On_Off.Onn &
           lastCmd == Isolette_Data_Model.On_Off.Onn)
         // END COMPUTE ENSURES timeTriggered
@@ -123,7 +129,12 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     // current command defaults to value of last command
     var currentCmd: Isolette_Data_Model.On_Off.Type = lastCmd
 
+    // use local options to reduce the resource limit, but also to increase the timeout
+    // for sat checking to be the same as for validity checking. This prevents Logika
+    // from exploring infeasible branches which can lead to an inconsistent context.
+    // 5 is sufficient for a capable machine, but using 10 to account for slower CI machines
     setOptions("Logika", """--par --par-branch --rlimit 500000 --timeout 10 --sat-timeout --solver-sat cvc5""")
+
     monitor_mode match {
       case Isolette_Data_Model.Monitor_Mode.Init_Monitor_Mode =>
         // REQ_MRM_1
@@ -137,13 +148,10 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
           // REQ_MRM_3
           currentCmd = lastCmd
         }
-        else {//if (currentTemp.value >= lowerAlarm.value + 0.5f & currentTemp.value <= upperAlarm.value - 0.5f) {
+        else {
           // REQ_MRM_4
           currentCmd = Isolette_Data_Model.On_Off.Off
         }
-        //else {
-        //  assert (F) // should be infeasible
-        //}
       case Isolette_Data_Model.Monitor_Mode.Failed_Monitor_Mode =>
         // REQ_MRM_5
         currentCmd = Isolette_Data_Model.On_Off.Onn
@@ -152,14 +160,16 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     api.put_alarm_control(currentCmd)
 
 
-    assert((
+    // use assert/deduce blocks to help SMT deduce the ensures/post-conditions
+
+    assert(( // REQ_MRM_2
       monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
         (currentTemp.value < lowerAlarm.value | currentTemp.value > upperAlarm.value))
       ->:
       (lastCmd == Isolette_Data_Model.On_Off.Onn))
 
     Deduce (
-      1 #> ((
+      1 #> ((  // REQ_MRM_3
         api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
           (api.current_tempWstatus.value >= api.lower_alarm_temp.value & api.current_tempWstatus.value <= api.upper_alarm_temp.value) &
           (api.current_tempWstatus.value < api.lower_alarm_temp.value + 0.5f | api.current_tempWstatus.value > api.upper_alarm_temp.value - 0.5f))
@@ -168,7 +178,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     )
 
    Deduce (
-     1 #> ((
+     1 #> ((  // REQ_MRM_4
        api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
          (api.current_tempWstatus.value >= api.lower_alarm_temp.value & api.current_tempWstatus.value <= api.upper_alarm_temp.value) &
          (api.current_tempWstatus.value >= api.lower_alarm_temp.value + 0.5f & api.current_tempWstatus.value <= api.upper_alarm_temp.value - 0.5f))

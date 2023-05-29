@@ -41,9 +41,7 @@ import org.sireum.Random.Impl.Xoshiro256
   override def test(o: Manage_Regulator_Mode_impl_thermostat_regulate_temperature_manage_regulator_mode_SlangCheckContainer): B = {
     BeforeEntrypoint()
     val r: B = testComputeCB(o.api_current_tempWstatus, o.api_interface_failure, o.api_internal_failure) match {
-      case GumboXResult.Pre_Condition_Unsat =>
-        isolette.RecordUnsatPre.report(isolette.JSON.fromRegulateManage_Regulator_Mode_impl_thermostat_regulate_temperature_manage_regulator_mode_SlangCheckContainer(o, T))
-        T
+      case GumboXResult.Pre_Condition_Unsat => T
       case GumboXResult.Post_Condition_Fail => F
       case GumboXResult.Post_Condition_Pass => T
     }
