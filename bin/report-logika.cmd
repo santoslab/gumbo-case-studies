@@ -33,6 +33,13 @@ val ignoreStringInterpWarnings: B = T // if T then ignore string interp warnings
 
 val isCi: B = Os.env("GITLAB_CI").nonEmpty || Os.env("GITHUB_ACTIONS").nonEmpty || Os.env("BUILD_ID").nonEmpty
 
+if (Os.cliArgs.size != 1) {
+  println("Must specify the number of runs")
+  Os.exit(-1)
+}
+
+val numRuns: Z = Z(Os.cliArgs(0)).get
+
 val initialisePrefix = "initialise"
 val timeTriggeredPrefix = "timeTriggered"
 
@@ -116,113 +123,117 @@ println("Initializing runtime library ...\n")
 Sireum.initRuntimeLibrary()
 
 var result: Z = 0
-val totalStart = org.sireum.extension.Time.currentMillis
-for(project <- projects.entries) {
-  println(s"Processing ${project._1} ...")
-  for (f <- project._2.containers) {
-    val csv = f.file.up / s".${f.file.name}.csv"
-    if (!csv.exists) {
-      csv.writeOver(s"entrypoint,cliTime,vcsNum,vcsTime,satNum,satTime")
-      csv.writeAppend(s",timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode")
-      csv.writeAppend(s",$systemVersion,$compName,$modelId,$procName,$memory\n")
-    }
-
-    for (entryPoint <- f.expectedReports.keys) {
-
-      val reporter = org.sireum.message.Reporter.create
-      var input = ISZ[String]("proyek", "logika",
-        "--timeout", f.logikaOpts.timeout.string, //
-        "--rlimit", f.logikaOpts.rlimit.string, //
-        "--par",
-        "--par-branch",
-        "--par-branch-mode", "all",
-        "--line", findMethod(entryPoint, f.file).string)
-
-      if (collectStats) {
-        input = input :+ "--stats"
-        input = input :+ "--log-detailed-info"
+val runsStart = org.sireum.extension.Time.currentMillis
+for (run <- 0 until numRuns) {
+  val runStart = org.sireum.extension.Time.currentMillis
+  for (project <- projects.entries) {
+    println(s"Processing ${project._1} ...")
+    for (f <- project._2.containers) {
+      val csv = f.file.up / s".${f.file.name}.csv"
+      if (!csv.exists) {
+        csv.writeOver(s"entrypoint,cliTime,vcsNum,vcsTime,satNum,satTime")
+        csv.writeAppend(s",timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode")
+        csv.writeAppend(s",$systemVersion,$compName,$modelId,$procName,$memory\n")
       }
 
-      input = input :+ (project._2.rootDir / "hamr" / "slang").value :+ f.file.value
+      for (entryPoint <- f.expectedReports.keys) {
 
-      println(s"Checking $entryPoint method of ${f.file.name}")
-      println(st"$sireum ${(input, " ")}".render)
+        val reporter = org.sireum.message.Reporter.create
+        var input = ISZ[String]("proyek", "logika",
+          "--timeout", f.logikaOpts.timeout.string, //
+          "--rlimit", f.logikaOpts.rlimit.string, //
+          "--par",
+          "--par-branch",
+          "--par-branch-mode", "all",
+          "--line", findMethod(entryPoint, f.file).string)
 
-      val start = org.sireum.extension.Time.currentMillis
-      val results = Sireum.runWithReporter(input, reporter)
-
-      val _elapsed = org.sireum.extension.Time.currentMillis - start
-      val elapsed = s"in ${_elapsed} ms"
-
-      var report = ISZ[String]()
-
-      def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
-        if (expected.size != actual.size) {
-          report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
+        if (collectStats) {
+          input = input :+ "--stats"
+          input = input :+ "--log-detailed-info"
         }
 
-        @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
+        input = input :+ (project._2.rootDir / "hamr" / "slang").value :+ f.file.value
 
-        for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
-          report = report :+ s"  Unexpected $typ: ${m2s(m)}"
-        }
-      }
+        println(s"Checking $entryPoint method of ${f.file.name}")
+        println(st"$sireum ${(input, " ")}".render)
 
-      compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
-        !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
-      compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
+        val start = org.sireum.extension.Time.currentMillis
+        val results = Sireum.runWithReporter(input, reporter)
 
-      if (report.nonEmpty) {
-        println(s"*** Failed ***\n")
-        println(st"${(report, "\n")}\n".render)
-        result = 1
-      } else {
-        println(s"  Everything accounted for:")
-      }
-      println(s"  Verification ${if (results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
+        val _elapsed = org.sireum.extension.Time.currentMillis - start
+        val elapsed = s"in ${_elapsed} ms"
 
-      if (collectStats) {
-        val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
+        var report = ISZ[String]()
 
-        def split(key: String): (Z, Z) = {
-          if (o.filter(f => ops.StringOps(f).contains(key)).isEmpty) {
-            return (0, 0)
-          } else {
-            val s = o.filter(f => ops.StringOps(f).contains(key))(0)
-            println(s)
-            val ss = ops.StringOps(s)
-            val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
+        def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
+          if (expected.size != actual.size) {
+            report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
+          }
 
-            val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
-            if (time.endsWith("s")) {
-              // 14.342s
-              val _time = ops.StringOps(time.substring(0, time.size - 1))
-              val ms = st"${(_time.split(c => c == '.'))}".render
-              return (num, Z(ms).get)
-            } else {
-              // 1:12.419
-              val min = Z(time.substring(0, time.indexOf(':'))).get
-              val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
-              val mills = Z(rest).get
-              val ms = min * 60000 + mills
-              return (num, ms)
-            }
+          @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
+
+          for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
+            report = report :+ s"  Unexpected $typ: ${m2s(m)}"
           }
         }
 
-        val (vcsNum, vcsTime) = split("Number of SMT2 verification condition checking")
-        val (satNum, satTime) = split("Number of SMT2 satisfiability checking")
+        compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
+          !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
+        compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
 
-        csv.writeAppend(s"$entryPoint,${_elapsed},$vcsNum,$vcsTime,$satNum,$satTime")
-        csv.writeAppend(s",$start,${SireumApi.version},${f.logikaOpts.timeout.string},${f.logikaOpts.rlimit.string},$par,$parBranch,$parMode")
-        csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(procName).get},${sysInfo.get(memory).get}\n")
+        if (report.nonEmpty) {
+          println(s"*** Failed ***\n")
+          println(st"${(report, "\n")}\n".render)
+          result = 1
+        } else {
+          println(s"  Everything accounted for:")
+        }
+        println(s"  Verification ${if (results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
+
+        if (collectStats) {
+          val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
+
+          def split(key: String): (Z, Z) = {
+            if (o.filter(f => ops.StringOps(f).contains(key)).isEmpty) {
+              return (0, 0)
+            } else {
+              val s = o.filter(f => ops.StringOps(f).contains(key))(0)
+              println(s)
+              val ss = ops.StringOps(s)
+              val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
+
+              val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
+              if (time.endsWith("s")) {
+                // 14.342s
+                val _time = ops.StringOps(time.substring(0, time.size - 1))
+                val ms = st"${(_time.split(c => c == '.'))}".render
+                return (num, Z(ms).get)
+              } else {
+                // 1:12.419
+                val min = Z(time.substring(0, time.indexOf(':'))).get
+                val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
+                val mills = Z(rest).get
+                val ms = min * 60000 + mills
+                return (num, ms)
+              }
+            }
+          }
+
+          val (vcsNum, vcsTime) = split("Number of SMT2 verification condition checking")
+          val (satNum, satTime) = split("Number of SMT2 satisfiability checking")
+
+          csv.writeAppend(s"$entryPoint,${_elapsed},$vcsNum,$vcsTime,$satNum,$satTime")
+          csv.writeAppend(s",$start,${SireumApi.version},${f.logikaOpts.timeout.string},${f.logikaOpts.rlimit.string},$par,$parBranch,$parMode")
+          csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(procName).get},${sysInfo.get(memory).get}\n")
+        }
       }
     }
   }
+  val runElapsed = org.sireum.extension.Time.currentMillis - runStart
+  println(s"Run $run took ${runElapsed} ms")
 }
-
-val totalElapsed = org.sireum.extension.Time.currentMillis - totalStart
-println(s"Full run took ${totalElapsed} ms")
+val runsElapsed = org.sireum.extension.Time.currentMillis - runsStart
+println(s"$numRuns runs took ${runsElapsed} ms")
 
 Os.exit(result)
 
