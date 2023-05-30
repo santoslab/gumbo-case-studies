@@ -131,7 +131,7 @@ for (run <- 0 until numRuns) {
     for (f <- project._2.containers) {
       val csv = f.file.up / s".${f.file.name}.csv"
       if (!csv.exists) {
-        csv.writeOver(s"entrypoint,cliTime,logikaTime,vcsNum,vcsTime,satNum,satTime")
+        csv.writeOver(s"entrypoint,cliTime,logikaTime,processBegin,processCheck,vcsNum,vcsTime,satNum,satTime")
         csv.writeAppend(s",timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode")
         csv.writeAppend(s",$systemVersion,$compName,$modelId,$processor,$memory\n")
       }
@@ -194,6 +194,7 @@ for (run <- 0 until numRuns) {
           val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
 
           def parseTime(_time: String): Z = {
+            println(_time)
             val time = ops.StringOps(_time)
             val millis = Z(time.substring(time.indexOf('.') + 1, time.size)).get
             if (time.indexOf(':') >= 0) {
@@ -206,31 +207,32 @@ for (run <- 0 until numRuns) {
             }
           }
 
+          def getTime(s: String): Z = {
+            println(s)
+            val ss = ops.StringOps(ops.StringOps(s).trim)
+            val time = ops.StringOps(ss.substring(ss.stringIndexOf("time: ") + 6, ss.size - 1))
+            return (
+              if (time.endsWith("s")) parseTime(time.substring(0, time.size - 1))
+              else parseTime(time.s))
+          }
+
           def split(key: String): (Z, Z) = {
             if (o.filter(f => ops.StringOps(f).contains(key)).isEmpty) {
               return (0, 0)
             } else {
               val ss = ops.StringOps(o.filter(f => ops.StringOps(f).contains(key))(0))
-              println(ss.s)
               val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
-              val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, ss.size - 1))
-              val ms =
-                if (time.endsWith("s")) parseTime(time.substring(0, time.size - 1))
-                else parseTime(time.s)
-              return (num, ms)
+              return (num, getTime(ss.substring(0, ss.size - 1)))
             }
           }
 
           val (vcsNum, vcsTime) = split("Number of SMT2 verification condition checking")
           val (satNum, satTime) = split("Number of SMT2 satisfiability checking")
-          val ltimeEntry = ops.StringOps(o.filter(f => ops.StringOps(f).contains("Logika verified! Elapsed time:"))(0))
-          println(ltimeEntry.s)
-          val ltimenum = ops.StringOps(ltimeEntry.substring(ltimeEntry.indexOf(':') + 2, ltimeEntry.size))
-          val logikaTime =
-            if (ltimenum.endsWith("s")) parseTime(ltimenum.substring(0, ltimenum.size - 1))
-            else parseTime(ltimenum.s)
+          val logikaTime = getTime(o.filter(f => ops.StringOps(f).contains("Logika verified! Elapsed time:"))(0))
+          val hbeginTime = getTime(o.filter(f => ops.StringOps(f).contains("Process Method Begin"))(0))
+          val hcheckTime = getTime(o.filter(f => ops.StringOps(f).contains("Process Method Just"))(0))
 
-          csv.writeAppend(s"$entryPoint,${_elapsed},$logikaTime,$vcsNum,$vcsTime,$satNum,$satTime")
+          csv.writeAppend(s"$entryPoint,${_elapsed},$logikaTime,$hbeginTime,$hcheckTime,$vcsNum,$vcsTime,$satNum,$satTime")
           csv.writeAppend(s",$start,${SireumApi.version},${f.logikaOpts.timeout.string},${f.logikaOpts.rlimit.string},$par,$parBranch,$parMode")
           csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(processor).get},${sysInfo.get(memory).get}\n")
           println()
