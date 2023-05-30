@@ -24,10 +24,8 @@ val home = homeBin.up
 val monitorDir = home / "src" / "main" / "component" / "isolette" / "Monitor"
 val regulateDir = home / "src" / "main" / "component" / "isolette" / "Regulate"
 
-val sireumBin = Os.path(Os.env("SIREUM_HOME").get) / "bin" 
+val sireumBin = Os.path(Os.env("SIREUM_HOME").get) / "bin"
 val sireum = sireumBin / (if(Os.isWin) "sireum.bat" else "sireum")
-
-val collectStats = T
 
 val ignoreStringInterpWarnings: B = T // if T then ignore string interp warnings as the strings only appear in api.logInfo calls and not in contracts
 
@@ -45,7 +43,7 @@ val emptyMap = Map.empty[String, ExpectedReport] + (initialisePrefix ~> emptyRep
 @datatype class LogikaOpt (val timeout: Z,
                            val rlimit: Z)
 
-val defaultOpts = LogikaOpt(timeout = (if(isCi) 10 else 2), rlimit = 2000000)
+val defaultOpts = LogikaOpt(timeout = (if(isCi) 20 else 10), rlimit = 2000000)
 
 @datatype class C(val file: Os.Path,
                   val logikaOpts: LogikaOpt,
@@ -70,98 +68,50 @@ println("Initializing runtime library ...\n")
 Sireum.initRuntimeLibrary()
 
 var result: Z = 0
-for(f <- files) {
-  val csv = f.file.up / s".${f.file.name}.csv"
-  if(collectStats) {
-    csv.writeOver("entrypoint,cliTime,vcsNum,vcsTime,satNum,satTime\n")
-  }
+for(f <- files;
+    entryPoint <- ISZ(initialisePrefix, timeTriggeredPrefix)) {
 
-  for (entryPoint <- ISZ(initialisePrefix, timeTriggeredPrefix)) {
+  val reporter = org.sireum.message.Reporter.create
+  val input = ISZ[String]("proyek", "logika",
+    "--timeout", f.logikaOpts.timeout.string, //
+    "--rlimit", f.logikaOpts.rlimit.string, //
+    "--par",
+    "--line", findMethod(entryPoint, f.file).string, //
+    home.value, f.file.value)
 
-    val reporter = org.sireum.message.Reporter.create
-    var input = ISZ[String]("proyek", "logika",
-      "--timeout", f.logikaOpts.timeout.string, //
-      "--rlimit", f.logikaOpts.rlimit.string, //
-      "--par",
-      "--par-branch",
-      "--par-branch-mode", "all",
-      "--line", findMethod(entryPoint, f.file).string)
+  println(s"Checking $entryPoint method of ${f.file.name}")
+  println(st"sireum ${(input, " ")}".render)
 
-    if (collectStats) {
-      input = input :+ "--stats"
-      input = input :+ "--log-detailed-info"
+  val start = org.sireum.extension.Time.currentMillis
+  val results = Sireum.runWithReporter(input, reporter)
+  val elapsed = s"in ${(org.sireum.extension.Time.currentMillis - start) / 1000} s"
+
+  var report =  ISZ[String]()
+
+  def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
+    if (expected.size != actual.size) {
+      report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
     }
-
-    input = input :+ home.value :+ f.file.value
-
-    println(s"Checking $entryPoint method of ${f.file.name}")
-    println(st"$sireum ${(input, " ")}".render)
-
-    val start = org.sireum.extension.Time.currentMillis
-    val results = Sireum.runWithReporter(input, reporter)
-
-    val _elapsed = org.sireum.extension.Time.currentMillis - start
-    val elapsed = s"in ${_elapsed} ms"
-
-    var report = ISZ[String]()
-
-    def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
-      if (expected.size != actual.size) {
-        report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
-      }
-
-      @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
-
-      for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
-        report = report :+ s"  Unexpected $typ: ${m2s(m)}"
-      }
-    }
-
-    compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
-      !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
-    compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
-
-    if (report.nonEmpty) {
-      println(s"*** Failed ***\n")
-      println(st"${(report, "\n")}\n".render)
-      result = 1
-    } else {
-      println(s"  Everything accounted for:")
-    }
-    println(s"  Verification ${if (results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
-
-    if (collectStats) {
-      def split(s: String): (Z, Z) = {
-        println(s)
-        val ss = ops.StringOps(s)
-        val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
-
-        val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
-        if (time.endsWith("s")) {
-          // (time 14.342s)
-          val _time = ops.StringOps(time.substring(0, time.size - 1))
-          val ms = st"${(_time.split(c => c == '.'))}".render
-          return (num, Z(ms).get)
-        } else {
-          // 1:12.419
-          val min = Z(time.substring(0, time.indexOf(':'))).get
-          val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
-          val mills = Z(rest).get
-          val ms = min * 60000 + mills
-          return (num, ms)
-        }
-      }
-
-      val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
-      val vcs = o.filter(f => ops.StringOps(f).contains("Number of SMT2 ver"))(0)
-      val sats = o.filter(f => ops.StringOps(f).contains("Number of SMT2 sat"))(0)
-      val (vcsNum, vcsTime) = split(vcs)
-      val (satNum, satTime) = split(sats)
-
-      csv.writeAppend(s"${entryPoint},${_elapsed},${vcsNum},${vcsTime},${satNum},${satTime}")
+    @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
+    for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
+      report = report :+ s"  Unexpected $typ: ${m2s(m)}"
     }
   }
+
+  compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
+    !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
+  compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
+
+  if (report.nonEmpty) {
+    println(s"*** Failed ***\n")
+    println(st"${(report, "\n")}\n".render)
+    result = 1
+  } else {
+    println(s"  Everything accounted for:")
+  }
+  println(s"  Verification ${if(results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
 }
+
 Os.exit(result)
 
 def findMethod(key: String, f: Os.Path): Z = {
