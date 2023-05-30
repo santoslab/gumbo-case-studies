@@ -232,7 +232,7 @@ for (run <- 0 until numRuns) {
 
           csv.writeAppend(s"$entryPoint,${_elapsed},$logikaTime,$vcsNum,$vcsTime,$satNum,$satTime")
           csv.writeAppend(s",$start,${SireumApi.version},${f.logikaOpts.timeout.string},${f.logikaOpts.rlimit.string},$par,$parBranch,$parMode")
-          csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(procName).get},${sysInfo.get(memory).get}\n")
+          csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(processor).get},${sysInfo.get(memory).get}\n")
           println()
         }
       }
