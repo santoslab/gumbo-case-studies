@@ -21,8 +21,8 @@ import org.sireum._
 val homeBin = Os.slashDir
 val home = homeBin.up
 
-val sireumBin = Os.path(Os.env("SIREUM_HOME").get) / "bin" 
-val sireum = sireumBin / (if(Os.isWin) "sireum.bat" else "sireum")
+val sireumBin = Os.path(Os.env("SIREUM_HOME").get) / "bin"
+val sireum = sireumBin / (if (Os.isWin) "sireum.bat" else "sireum")
 
 val collectStats = T
 val par: B = T
@@ -50,10 +50,10 @@ val emptyReport = ExpectedReport(ISZ(), ISZ())
 val periodicMap = Map.empty[String, ExpectedReport] + (initialisePrefix ~> emptyReport) + (timeTriggeredPrefix ~> emptyReport)
 val sporadicMap = Map.empty[String, ExpectedReport] + (initialisePrefix ~> emptyReport)
 
-@datatype class LogikaOpt (val timeout: Z,
-                           val rlimit: Z)
+@datatype class LogikaOpt(val timeout: Z,
+                          val rlimit: Z)
 
-val defaultOpts = LogikaOpt(timeout = (if(isCi) 10 else 2), rlimit = 2000000)
+val defaultOpts = LogikaOpt(timeout = (if (isCi) 10 else 2), rlimit = 2000000)
 
 @datatype class Project(val rootDir: Os.Path,
                         val title: String,
@@ -114,7 +114,7 @@ val projects: Map[String, Project] = Map.empty + isolette + rts + tcP + tcS
 val systemVersion = "System Version"
 val compName = "Computer Name"
 val modelId = "Model Identifier"
-val procName = "Processor Name"
+val processor = "Processor"
 val memory = "Memory"
 
 val sysInfo = getSystemInfo
@@ -131,9 +131,9 @@ for (run <- 0 until numRuns) {
     for (f <- project._2.containers) {
       val csv = f.file.up / s".${f.file.name}.csv"
       if (!csv.exists) {
-        csv.writeOver(s"entrypoint,cliTime,vcsNum,vcsTime,satNum,satTime")
+        csv.writeOver(s"entrypoint,cliTime,logikaTime,vcsNum,vcsTime,satNum,satTime")
         csv.writeAppend(s",timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode")
-        csv.writeAppend(s",$systemVersion,$compName,$modelId,$procName,$memory\n")
+        csv.writeAppend(s",$systemVersion,$compName,$modelId,$processor,$memory\n")
       }
 
       for (entryPoint <- f.expectedReports.keys) {
@@ -193,38 +193,47 @@ for (run <- 0 until numRuns) {
         if (collectStats) {
           val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
 
+          def parseTime(_time: String): Z = {
+            val time = ops.StringOps(_time)
+            val millis = Z(time.substring(time.indexOf('.') + 1, time.size)).get
+            if (time.indexOf(':') >= 0) {
+              val minAsMs = Z(time.substring(0, time.indexOf(':'))).get * 60000
+              val secAsMs = Z(time.substring(time.indexOf(':') + 1, time.indexOf('.'))).get * 1000
+              return minAsMs + secAsMs + millis
+            } else {
+              val minAsMs = Z(time.substring(0, time.indexOf('.'))).get * 1000
+              return minAsMs + millis
+            }
+          }
+
           def split(key: String): (Z, Z) = {
             if (o.filter(f => ops.StringOps(f).contains(key)).isEmpty) {
               return (0, 0)
             } else {
-              val s = o.filter(f => ops.StringOps(f).contains(key))(0)
-              println(s)
-              val ss = ops.StringOps(s)
+              val ss = ops.StringOps(o.filter(f => ops.StringOps(f).contains(key))(0))
+              println(ss.s)
               val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
-
-              val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
-              if (time.endsWith("s")) {
-                // 14.342s
-                val _time = ops.StringOps(time.substring(0, time.size - 1))
-                val ms = st"${(_time.split(c => c == '.'))}".render
-                return (num, Z(ms).get)
-              } else {
-                // 1:12.419
-                val min = Z(time.substring(0, time.indexOf(':'))).get
-                val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
-                val mills = Z(rest).get
-                val ms = min * 60000 + mills
-                return (num, ms)
-              }
+              val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, ss.size - 1))
+              val ms =
+                if (time.endsWith("s")) parseTime(time.substring(0, time.size - 1))
+                else parseTime(time.s)
+              return (num, ms)
             }
           }
 
           val (vcsNum, vcsTime) = split("Number of SMT2 verification condition checking")
           val (satNum, satTime) = split("Number of SMT2 satisfiability checking")
+          val ltimeEntry = ops.StringOps(o.filter(f => ops.StringOps(f).contains("Logika verified! Elapsed time:"))(0))
+          println(ltimeEntry.s)
+          val ltimenum = ops.StringOps(ltimeEntry.substring(ltimeEntry.indexOf(':') + 2, ltimeEntry.size))
+          val logikaTime =
+            if (ltimenum.endsWith("s")) parseTime(ltimenum.substring(0, ltimenum.size - 1))
+            else parseTime(ltimenum.s)
 
-          csv.writeAppend(s"$entryPoint,${_elapsed},$vcsNum,$vcsTime,$satNum,$satTime")
+          csv.writeAppend(s"$entryPoint,${_elapsed},$logikaTime,$vcsNum,$vcsTime,$satNum,$satTime")
           csv.writeAppend(s",$start,${SireumApi.version},${f.logikaOpts.timeout.string},${f.logikaOpts.rlimit.string},$par,$parBranch,$parMode")
           csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(procName).get},${sysInfo.get(memory).get}\n")
+          println()
         }
       }
     }
@@ -243,7 +252,7 @@ def findMethod(key: String, f: Os.Path): Z = {
 
   var line = 1
   // add space before newline as split does not preserve empty lines (i.e. those that only contain newline char)
-  for(l <- ops.StringOps(ops.StringOps(f.read).replaceAllLiterally("\n", " \n")).split(c => c == '\n')) {
+  for (l <- ops.StringOps(ops.StringOps(f.read).replaceAllLiterally("\n", " \n")).split(c => c == '\n')) {
     if (ops.StringOps(l).contains(s"def $key(api: ")) {
       return line
     }
@@ -252,11 +261,23 @@ def findMethod(key: String, f: Os.Path): Z = {
   halt(s"Infeasible, didn't find $key in $f")
 }
 
-def getSystemInfo: Map[String,String] = {
-  if(Os.isMac) {
-    val info = ops.ISZOps(for(l <- ops.StringOps(proc"system_profiler SPSoftwareDataType SPHardwareDataType".runCheck().out).split(c => c == '\n')) yield ops.StringOps(ops.StringOps(l).trim).split(c => c == ':'))
-    @strictpure def f(key: String): (String, String) = (key,ops.StringOps(ops.StringOps(info.filter(p => p(0) == key)(0)(1)).trim).replaceAllChars(',', '_'))
-    return Map.empty[String,String] + f(systemVersion) + f(compName) + f(modelId) + f(procName) + f(memory)
+def getSystemInfo: Map[String, String] = {
+  if (Os.isMac) {
+    val info = ops.ISZOps(for (l <- ops.StringOps(proc"system_profiler SPSoftwareDataType SPHardwareDataType".runCheck().out).split(c => c == '\n')) yield ops.StringOps(ops.StringOps(l).trim).split(c => c == ':'))
+
+    @strictpure def f(key: String): (String, String) = (key, ops.StringOps(ops.StringOps(info.filter(p => p(0) == key)(0)(1)).trim).replaceAllChars(',', '_'))
+
+    val processorVal =
+      if (Os.prop("os.arch").get == "aarch64") {
+        val chip = f("Chip")
+        val cores = f("Total Number of Cores")
+        s"${chip._2} ${cores._2}"
+      } else {
+        val name = f("Processor Name")
+        val speed = f("Processor Speed")
+        s"${name._2} ${speed._2}"
+      }
+    return Map.empty[String, String] + f(systemVersion) + f(compName) + f(modelId) + processor ~> processorVal + f(memory)
   } else {
     halt("TODO")
   }

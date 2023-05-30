@@ -3,24 +3,29 @@
 import org.sireum._
 
 
+def parseTime(_time: String): Z = {
+  val time = ops.StringOps(_time)
+  val millis = Z(time.substring(time.indexOf('.') + 1, time.size)).get
+  if (time.indexOf(':') >= 0) {
+    val minAsMs = Z(time.substring(0, time.indexOf(':'))).get * 60000
+    val secAsMs = Z(time.substring(time.indexOf(':') + 1, time.indexOf('.'))).get * 1000
+    return  minAsMs + secAsMs + millis
+  } else {
+    val minAsMs = Z(time.substring(0, time.indexOf('.'))).get * 1000
+    return minAsMs + millis
+  }
+}
+
 def split(s: String): (Z, Z) = {
   val ss = ops.StringOps(s)
   val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
-
   val time = ops.StringOps(ss.substring(ss.stringIndexOf("(time: ") + 7, s.size - 1))
-  if (time.endsWith("s")) {
-    // 14.342s
-    val _time = ops.StringOps(time.substring(0, time.size - 1))
-    val ms = st"${(_time.split(c => c == '.'))}".render
-    return (num, Z(ms).get)
-  } else {
-    // 1:12.419
-    val min = Z(time.substring(0, time.indexOf(':'))).get
-    val rest = st"${(ops.StringOps(time.substring(time.indexOf(':') + 1, time.size)).split(c => c == '.'))}".render
-    val mills = Z(rest).get
-    val ms = min * 60000 + mills
-    return (num, ms)
-  }
+  val ms = if (time.endsWith("s"))
+    parseTime(time.substring(0, time.size - 1))
+  else
+    parseTime(time.s)
+
+  return (num, ms)
 }
 
 
@@ -36,3 +41,4 @@ val samples: ISZ[String]= ISZ(
 for(s <- samples) {
   println(split(s))
 }
+

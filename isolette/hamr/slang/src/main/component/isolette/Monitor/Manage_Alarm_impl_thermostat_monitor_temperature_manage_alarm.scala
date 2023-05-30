@@ -132,8 +132,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     // use local options to reduce the resource limit, but also to increase the timeout
     // for sat checking to be the same as for validity checking. This prevents Logika
     // from exploring infeasible branches which can lead to an inconsistent context.
-    // 5 is sufficient for a capable machine, but using 10 to account for slower CI machines
-    setOptions("Logika", """--par --par-branch --rlimit 500000 --timeout 10 --sat-timeout --solver-sat cvc5""")
+    setOptions("Logika", """--par --par-branch --par-branch-mode all --rlimit 500000 --timeout 5 --sat-timeout --solver-sat cvc5""")
 
     monitor_mode match {
       case Isolette_Data_Model.Monitor_Mode.Init_Monitor_Mode =>
@@ -160,7 +159,8 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     api.put_alarm_control(currentCmd)
 
 
-    // use assert/deduce blocks to help SMT deduce the ensures/post-conditions
+    // use assert/deduce blocks to help SMT deduce the ensures/post-conditions when not using
+    // Logika's use-real option
 
     assert(( // REQ_MA_2
       monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
