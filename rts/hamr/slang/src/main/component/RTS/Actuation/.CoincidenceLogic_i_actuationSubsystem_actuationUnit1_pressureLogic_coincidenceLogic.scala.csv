@@ -1,0 +1,21 @@
+entrypoint,cliTime,logikaTime,processBegin,processCheck,vcsNum,vcsTime,satNum,satTime,timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode,System Version,Computer Name,Model Identifier,Processor,Memory
+initialise,2271,2271,262,5,0,0,0,0,1685485267753,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2484,2483,443,227,5,168,0,0,1685485270030,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2159,2158,182,4,0,0,0,0,1685485516319,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2214,2213,396,231,5,175,0,0,1685485518483,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,1947,1946,173,4,0,0,0,0,1685485756971,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2147,2146,341,199,5,154,0,0,1685485758922,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,1963,1963,175,4,0,0,0,0,1685485998728,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2158,2157,338,200,5,154,0,0,1685486000695,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2118,2118,170,4,0,0,0,0,1685486240851,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2359,2359,385,221,5,170,0,0,1685486242974,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2119,2118,148,4,0,0,0,0,1685486483813,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2294,2294,348,211,5,162,0,0,1685486485936,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2108,2107,154,4,0,0,0,0,1685486727114,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2323,2323,351,210,5,163,0,0,1685486729226,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2100,2100,145,4,0,0,0,0,1685486969975,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2167,2167,373,210,5,164,0,0,1685486972079,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2078,2078,140,4,0,0,0,0,1685487212378,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2319,2317,368,205,5,157,0,0,1685487214460,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2099,2099,137,3,0,0,0,0,1685487454786,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,2260,2260,374,206,5,155,0,0,1685487456889,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB

@@ -1,0 +1,21 @@
+entrypoint,cliTime,logikaTime,processBegin,processCheck,vcsNum,vcsTime,satNum,satTime,timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode,System Version,Computer Name,Model Identifier,Processor,Memory
+initialise,2460,2459,361,42,1,33,0,0,1685485179526,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15731,15731,13710,13434,7,254,31,14816,1685485182000,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2307,2306,279,35,1,25,0,0,1685485429824,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15448,15447,13494,13324,7,241,31,14751,1685485432144,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,1981,1981,184,28,1,21,0,0,1685485672163,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15350,15349,13432,13273,7,238,31,14754,1685485674152,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2155,2154,178,28,1,21,0,0,1685485914172,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15374,15373,13420,13250,7,248,31,14712,1685485916335,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2135,2134,179,28,1,21,0,0,1685486155911,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15350,15349,13427,13255,7,239,31,14754,1685486158054,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2154,2153,177,28,1,21,0,0,1685486398300,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15416,15416,13443,13272,7,250,31,14749,1685486400462,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2171,2171,179,27,1,21,0,0,1685486641616,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15459,15458,13428,13283,7,232,31,14813,1685486643795,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2150,2149,172,27,1,21,0,0,1685486884676,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15384,15383,13474,13297,7,243,31,14768,1685486886833,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2193,2193,182,27,1,20,0,0,1685487127552,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15351,15351,13415,13266,7,244,31,14739,1685487129752,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+initialise,2156,2155,169,27,1,21,0,0,1685487369832,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
+timeTriggered,15356,15355,13429,13265,7,242,31,14740,1685487371995,4.20230530.843ede1*,2,2000000,true,true,all,macOS 13.1 (22C65),e2206hm02,Macmini9_1,Apple M1 8 (4 performance and 4 efficiency),16 GB
