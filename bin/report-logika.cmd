@@ -121,8 +121,8 @@ def run: Z = {
     Os.exit(-1)
   }
 
-  val numRuns: Z = Z(Os.cliArgs(0)).get
-
+  val numRuns: Z = Z(Os.cliArgs(1)).get
+  println(s"Starting $numRuns runs")
 
   println("Initializing runtime library ...\n")
   Sireum.initRuntimeLibrary()
