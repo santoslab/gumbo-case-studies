@@ -33,13 +33,6 @@ val ignoreStringInterpWarnings: B = T // if T then ignore string interp warnings
 
 val isCi: B = Os.env("GITLAB_CI").nonEmpty || Os.env("GITHUB_ACTIONS").nonEmpty || Os.env("BUILD_ID").nonEmpty
 
-if (Os.cliArgs.size != 1) {
-  println("Must specify the number of runs")
-  Os.exit(-1)
-}
-
-val numRuns: Z = Z(Os.cliArgs(0)).get
-
 val initialisePrefix = "initialise"
 val timeTriggeredPrefix = "timeTriggered"
 
@@ -60,7 +53,8 @@ val defaultOpts = LogikaOpt(timeout = (if (isCi) 10 else 2), rlimit = 2000000)
                         val description: String,
                         val containers: ISZ[C])
 
-@datatype class C(val file: Os.Path,
+@datatype class C(val componentShortName: String,
+                  val file: Os.Path,
                   val logikaOpts: LogikaOpt,
                   val expectedReports: Map[String, ExpectedReport])
 
@@ -70,44 +64,45 @@ val monitorDir = isoletteHome / "hamr" / "slang" / "src" / "main" / "component" 
 val regulateDir = isoletteHome / "hamr" / "slang" / "src" / "main" / "component" / "isolette" / "Regulate"
 val isolette = "isolette" ~>
   Project(isoletteHome, "Isolette", "Isolette", ISZ(
-    C(monitorDir / "Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm.scala", defaultOpts, periodicMap),
-    C(monitorDir / "Manage_Monitor_Interface_impl_thermostat_monitor_temperature_manage_monitor_interface.scala", defaultOpts, periodicMap),
-    C(monitorDir / "Manage_Monitor_Mode_impl_thermostat_monitor_temperature_manage_monitor_mode.scala", defaultOpts, periodicMap),
-    C(regulateDir / "Manage_Heat_Source_impl_thermostat_regulate_temperature_manage_heat_source.scala", defaultOpts, periodicMap),
-    C(regulateDir / "Manage_Regulator_Interface_impl_thermostat_regulate_temperature_manage_regulator_interface.scala", defaultOpts, periodicMap),
-    C(regulateDir / "Manage_Regulator_Mode_impl_thermostat_regulate_temperature_manage_regulator_mode.scala", defaultOpts, periodicMap)))
+    C("MA", monitorDir / "Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm.scala", defaultOpts, periodicMap),
+    C("MMI", monitorDir / "Manage_Monitor_Interface_impl_thermostat_monitor_temperature_manage_monitor_interface.scala", defaultOpts, periodicMap),
+    C("MMM", monitorDir / "Manage_Monitor_Mode_impl_thermostat_monitor_temperature_manage_monitor_mode.scala", defaultOpts, periodicMap),
+    C("MHS", regulateDir / "Manage_Heat_Source_impl_thermostat_regulate_temperature_manage_heat_source.scala", defaultOpts, periodicMap),
+    C("MRI", regulateDir / "Manage_Regulator_Interface_impl_thermostat_regulate_temperature_manage_regulator_interface.scala", defaultOpts, periodicMap),
+    C("MRM", regulateDir / "Manage_Regulator_Mode_impl_thermostat_regulate_temperature_manage_regulator_mode.scala", defaultOpts, periodicMap)))
 
 val rtsHome = home / "rts"
 val actuationDir = rtsHome / "hamr" / "slang" / "src" / "main" / "component" / "RTS" / "Actuation"
 val rts = "rts" ~>
-  Project(rtsHome, "RTS", "RTS", ISZ(C(actuationDir / "Actuator_i_actuationSubsystem_saturationActuatorUnit_saturationActuator_actuator.scala", defaultOpts, periodicMap),
-    C(actuationDir / "Actuator_i_actuationSubsystem_tempPressureActuatorUnit_tempPressureActuator_actuator.scala", defaultOpts, periodicMap),
-    C(actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit1_pressureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit1_saturationLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit1_temperatureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit2_pressureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit2_saturationLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit2_temperatureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "OrLogic_i_actuationSubsystem_actuationUnit1_tempPressureTripOut_orLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "OrLogic_i_actuationSubsystem_actuationUnit2_tempPressureTripOut_orLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "OrLogic_i_actuationSubsystem_saturationActuatorUnit_actuateSaturationActuator_orLogic.scala", defaultOpts, periodicMap),
-    C(actuationDir / "OrLogic_i_actuationSubsystem_tempPressureActuatorUnit_actuateTempPressureActuator_orLogic.scala", defaultOpts, periodicMap)))
+  Project(rtsHome, "RTS", "RTS", ISZ(
+    C("SaturationActuator", actuationDir / "Actuator_i_actuationSubsystem_saturationActuatorUnit_saturationActuator_actuator.scala", defaultOpts, periodicMap),
+    C("TempPressureActuator", actuationDir / "Actuator_i_actuationSubsystem_tempPressureActuatorUnit_tempPressureActuator_actuator.scala", defaultOpts, periodicMap),
+    C("AU1\\_PressureLogic", actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit1_pressureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
+    C("AU1\\_SaturationLogic", actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit1_saturationLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
+    C("AU1\\_TemperatureLogic", actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit1_temperatureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
+    C("AU2\\_PresureLogic", actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit2_pressureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
+    C("AU2\\_SaturationLogic", actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit2_saturationLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
+    C("AU2\\_SaturationLogic", actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit2_temperatureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
+    C("AU1\\_TempPressureTripOut", actuationDir / "OrLogic_i_actuationSubsystem_actuationUnit1_tempPressureTripOut_orLogic.scala", defaultOpts, periodicMap),
+    C("AU2\\_TempPressureTripOut", actuationDir / "OrLogic_i_actuationSubsystem_actuationUnit2_tempPressureTripOut_orLogic.scala", defaultOpts, periodicMap),
+    C("OrLogic\\_SaturationActuator", actuationDir / "OrLogic_i_actuationSubsystem_saturationActuatorUnit_actuateSaturationActuator_orLogic.scala", defaultOpts, periodicMap),
+    C("OrLogic\\_TempPressureActuator", actuationDir / "OrLogic_i_actuationSubsystem_tempPressureActuatorUnit_actuateTempPressureActuator_orLogic.scala", defaultOpts, periodicMap)))
 
 val tcPHome = home / "temp_control" / "periodic"
 val tcPDir = tcPHome / "hamr" / "slang" / "src" / "main" / "component" / "tc"
 val tcP = "tcPeriodic" ~>
-  Project(tcPHome, "TempControl Periodic", "TempControl Periodic", ISZ[C](
-    C(tcPDir / "TempControlSoftwareSystem" / "TempControlPeriodic_p_tcproc_tempControl.scala", defaultOpts, periodicMap),
-    C(tcPDir / "TempSensor" / "TempSensorPeriodic_p_tcproc_tempSensor.scala", defaultOpts, periodicMap),
+  Project(tcPHome, "TCP", "TempControl Periodic", ISZ[C](
+    C("TempControl", tcPDir / "TempControlSoftwareSystem" / "TempControlPeriodic_p_tcproc_tempControl.scala", defaultOpts, periodicMap),
+    C("TempSensor", tcPDir / "TempSensor" / "TempSensorPeriodic_p_tcproc_tempSensor.scala", defaultOpts, periodicMap),
   ))
 
 val tcSHome = home / "temp_control" / "sporadic"
 val tcSDir = tcSHome / "hamr" / "slang" / "src" / "main" / "component" / "tc"
 val tcS = "tcSporadic" ~>
-  Project(tcSHome, "TempControl Sporadic", "TempControl Sporadic", ISZ[C](
-    C(tcSDir / "TempControlSoftwareSystem" / "TempControl_s_tcproc_tempControl.scala", defaultOpts,
+  Project(tcSHome, "TempControl", "TempControl Sporadic", ISZ[C](
+    C("TempControl", tcSDir / "TempControlSoftwareSystem" / "TempControl_s_tcproc_tempControl.scala", defaultOpts,
       sporadicMap + ("handle_fanAck" ~> emptyReport) + ("handle_setPoint" ~> emptyReport) + ("handle_tempChanged" ~> emptyReport)),
-    C(tcSDir / "TempSensor" / "TempSensor_s_tcproc_tempSensor.scala", defaultOpts, periodicMap)))
+    C("TempSensor", tcSDir / "TempSensor" / "TempSensor_s_tcproc_tempSensor.scala", defaultOpts, periodicMap)))
 
 val projects: Map[String, Project] = Map.empty + isolette + rts + tcP + tcS
 
@@ -119,134 +114,262 @@ val memory = "Memory"
 
 val sysInfo = getSystemInfo
 
-println("Initializing runtime library ...\n")
-Sireum.initRuntimeLibrary()
+def run: Z = {
 
-var result: Z = 0
-val runsStart = org.sireum.extension.Time.currentMillis
-for (run <- 0 until numRuns) {
-  val runStart = org.sireum.extension.Time.currentMillis
-  for (project <- projects.entries) {
-    println(s"Processing ${project._1} ...")
-    for (f <- project._2.containers) {
-      val csv = f.file.up / s".${f.file.name}.csv"
-      if (!csv.exists) {
-        csv.writeOver(s"entrypoint,cliTime,logikaTime,processBegin,processCheck,vcsNum,vcsTime,satNum,satTime")
-        csv.writeAppend(s",timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode")
-        csv.writeAppend(s",$systemVersion,$compName,$modelId,$processor,$memory\n")
-      }
+  if (Os.cliArgs.size != 2) {
+    println("Must specify the number of runs")
+    Os.exit(-1)
+  }
 
-      for (entryPoint <- f.expectedReports.keys) {
+  val numRuns: Z = Z(Os.cliArgs(0)).get
 
-        val reporter = org.sireum.message.Reporter.create
-        var input = ISZ[String]("proyek", "logika",
-          "--timeout", f.logikaOpts.timeout.string, //
-          "--rlimit", f.logikaOpts.rlimit.string, //
-          "--par",
-          "--par-branch",
-          "--par-branch-mode", "all",
-          "--line", findMethod(entryPoint, f.file).string)
 
-        if (collectStats) {
-          input = input :+ "--stats"
-          input = input :+ "--log-detailed-info"
+  println("Initializing runtime library ...\n")
+  Sireum.initRuntimeLibrary()
+
+  var result: Z = 0
+  val runsStart = org.sireum.extension.Time.currentMillis
+  for (run <- 0 until numRuns) {
+    val runStart = org.sireum.extension.Time.currentMillis
+    for (project <- projects.entries) {
+      println(s"Processing ${project._1} ...")
+      for (f <- project._2.containers) {
+        val csv = f.file.up / s".${f.file.name}.csv"
+        if (!csv.exists) {
+          csv.writeOver(s"entrypoint,cliTime,logikaTime,processBegin,processCheck,vcsNum,vcsTime,satNum,satTime")
+          csv.writeAppend(s",timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode")
+          csv.writeAppend(s",$systemVersion,$compName,$modelId,$processor,$memory\n")
         }
 
-        input = input :+ (project._2.rootDir / "hamr" / "slang").value :+ f.file.value
+        for (entryPoint <- f.expectedReports.keys) {
 
-        println(s"Checking $entryPoint method of ${f.file.name}")
-        println(st"$sireum ${(input, " ")}".render)
+          val reporter = org.sireum.message.Reporter.create
+          var input = ISZ[String]("proyek", "logika",
+            "--timeout", f.logikaOpts.timeout.string, //
+            "--rlimit", f.logikaOpts.rlimit.string, //
+            "--par",
+            "--par-branch",
+            "--par-branch-mode", "all",
+            "--line", findMethod(entryPoint, f.file).string)
 
-        val start = org.sireum.extension.Time.currentMillis
-        val results = Sireum.runWithReporter(input, reporter)
-
-        val _elapsed = org.sireum.extension.Time.currentMillis - start
-        val elapsed = s"in ${_elapsed} ms"
-
-        var report = ISZ[String]()
-
-        def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
-          if (expected.size != actual.size) {
-            report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
+          if (collectStats) {
+            input = input :+ "--stats"
+            input = input :+ "--log-detailed-info"
           }
 
-          @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
+          input = input :+ (project._2.rootDir / "hamr" / "slang").value :+ f.file.value
 
-          for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
-            report = report :+ s"  Unexpected $typ: ${m2s(m)}"
-          }
-        }
+          println(s"Checking $entryPoint method of ${f.file.name}")
+          println(st"$sireum ${(input, " ")}".render)
 
-        compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
-          !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
-        compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
+          val start = org.sireum.extension.Time.currentMillis
+          val results = Sireum.runWithReporter(input, reporter)
 
-        if (report.nonEmpty) {
-          println(s"*** Failed ***\n")
-          println(st"${(report, "\n")}\n".render)
-          result = 1
-        } else {
-          println(s"  Everything accounted for:")
-        }
-        println(s"  Verification ${if (results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
+          val _elapsed = org.sireum.extension.Time.currentMillis - start
+          val elapsed = s"in ${_elapsed} ms"
 
-        if (collectStats) {
-          val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
+          var report = ISZ[String]()
 
-          def parseTime(_time: String): Z = {
-            println(_time)
-            val time = ops.StringOps(_time)
-            val millis = Z(time.substring(time.indexOf('.') + 1, time.size)).get
-            if (time.indexOf(':') >= 0) {
-              val minAsMs = Z(time.substring(0, time.indexOf(':'))).get * 60000
-              val secAsMs = Z(time.substring(time.indexOf(':') + 1, time.indexOf('.'))).get * 1000
-              return minAsMs + secAsMs + millis
-            } else {
-              val minAsMs = Z(time.substring(0, time.indexOf('.'))).get * 1000
-              return minAsMs + millis
+          def compare(typ: String, expected: ISZ[String], actual: ISZ[message.Message]): Unit = {
+            if (expected.size != actual.size) {
+              report = report :+ s"  Was expecting ${expected.size} ${typ}s but encountered ${actual.size}"
+            }
+
+            @strictpure def m2s(m: message.Message): String = s"[${m.posOpt.get.beginLine}, ${m.posOpt.get.beginColumn}] ${m.text}"
+
+            for (m <- actual if !ops.ISZOps(expected).exists(p => p == m2s(m))) {
+              report = report :+ s"  Unexpected $typ: ${m2s(m)}"
             }
           }
 
-          def getTime(s: String): Z = {
-            println(s)
-            val ss = ops.StringOps(ops.StringOps(s).trim)
-            val time = ops.StringOps(ss.substring(ss.stringIndexOf("time: ") + 6, ss.size - 1))
-            return (
-              if (time.endsWith("s")) parseTime(time.substring(0, time.size - 1))
-              else parseTime(time.s))
-          }
+          compare("warning", f.expectedReports.get(entryPoint).get.expectedWarnings, reporter.warnings.filter(p =>
+            !ignoreStringInterpWarnings || !ops.StringOps(p.text).contains("String interpolation is currently over-approximated to produce an unconstrained string")))
+          compare("error", f.expectedReports.get(entryPoint).get.expectedErrors, reporter.errors)
 
-          def split(key: String): (Z, Z) = {
-            if (o.filter(f => ops.StringOps(f).contains(key)).isEmpty) {
-              return (0, 0)
-            } else {
-              val ss = ops.StringOps(o.filter(f => ops.StringOps(f).contains(key))(0))
-              val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
-              return (num, getTime(ss.substring(0, ss.size - 1)))
+          if (report.nonEmpty) {
+            println(s"*** Failed ***\n")
+            println(st"${(report, "\n")}\n".render)
+            result = 1
+          } else {
+            println(s"  Everything accounted for:")
+          }
+          println(s"  Verification ${if (results._1 == 0) s"succeeded $elapsed!" else s"failed $elapsed"}\n")
+
+          if (collectStats) {
+            val o = ops.ISZOps(ops.StringOps(results._2).split(c => c == '\n'))
+
+            def parseTime(_time: String): Z = {
+              println(_time)
+              val time = ops.StringOps(_time)
+              val millis = Z(time.substring(time.indexOf('.') + 1, time.size)).get
+              if (time.indexOf(':') >= 0) {
+                val minAsMs = Z(time.substring(0, time.indexOf(':'))).get * 60000
+                val secAsMs = Z(time.substring(time.indexOf(':') + 1, time.indexOf('.'))).get * 1000
+                return minAsMs + secAsMs + millis
+              } else {
+                val minAsMs = Z(time.substring(0, time.indexOf('.'))).get * 1000
+                return minAsMs + millis
+              }
             }
+
+            def getTime(s: String): Z = {
+              println(s)
+              val ss = ops.StringOps(ops.StringOps(s).trim)
+              val time = ops.StringOps(ss.substring(ss.stringIndexOf("time: ") + 6, ss.size - 1))
+              return (
+                if (time.endsWith("s")) parseTime(time.substring(0, time.size - 1))
+                else parseTime(time.s))
+            }
+
+            def split(key: String): (Z, Z) = {
+              if (o.filter(f => ops.StringOps(f).contains(key)).isEmpty) {
+                return (0, 0)
+              } else {
+                val ss = ops.StringOps(o.filter(f => ops.StringOps(f).contains(key))(0))
+                val num = Z(ss.substring(ss.indexOf(':') + 2, ss.indexOf('(') - 1)).get
+                return (num, getTime(ss.substring(0, ss.size - 1)))
+              }
+            }
+
+            val (vcsNum, vcsTime) = split("Number of SMT2 verification condition checking")
+            val (satNum, satTime) = split("Number of SMT2 satisfiability checking")
+            val logikaTime = getTime(o.filter(f => ops.StringOps(f).contains("Logika verified! Elapsed time:"))(0))
+            val hbeginTime = getTime(o.filter(f => ops.StringOps(f).contains("Process Method Begin"))(0))
+            val hcheckTime = getTime(o.filter(f => ops.StringOps(f).contains("Process Method Just"))(0))
+
+            csv.writeAppend(s"$entryPoint,${_elapsed},$logikaTime,$hbeginTime,$hcheckTime,$vcsNum,$vcsTime,$satNum,$satTime")
+            csv.writeAppend(s",$start,${SireumApi.version},${f.logikaOpts.timeout.string},${f.logikaOpts.rlimit.string},$par,$parBranch,$parMode")
+            csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(processor).get},${sysInfo.get(memory).get}\n")
+            println()
           }
-
-          val (vcsNum, vcsTime) = split("Number of SMT2 verification condition checking")
-          val (satNum, satTime) = split("Number of SMT2 satisfiability checking")
-          val logikaTime = getTime(o.filter(f => ops.StringOps(f).contains("Logika verified! Elapsed time:"))(0))
-          val hbeginTime = getTime(o.filter(f => ops.StringOps(f).contains("Process Method Begin"))(0))
-          val hcheckTime = getTime(o.filter(f => ops.StringOps(f).contains("Process Method Just"))(0))
-
-          csv.writeAppend(s"$entryPoint,${_elapsed},$logikaTime,$hbeginTime,$hcheckTime,$vcsNum,$vcsTime,$satNum,$satTime")
-          csv.writeAppend(s",$start,${SireumApi.version},${f.logikaOpts.timeout.string},${f.logikaOpts.rlimit.string},$par,$parBranch,$parMode")
-          csv.writeAppend(s",${sysInfo.get(systemVersion).get},${sysInfo.get(compName).get},${sysInfo.get(modelId).get},${sysInfo.get(processor).get},${sysInfo.get(memory).get}\n")
-          println()
         }
       }
     }
+    val runElapsed = org.sireum.extension.Time.currentMillis - runStart
+    println(s"Run $run took ${runElapsed} ms")
   }
-  val runElapsed = org.sireum.extension.Time.currentMillis - runStart
-  println(s"Run $run took ${runElapsed} ms")
-}
-val runsElapsed = org.sireum.extension.Time.currentMillis - runsStart
-println(s"$numRuns runs took ${runsElapsed} ms")
+  val runsElapsed = org.sireum.extension.Time.currentMillis - runsStart
+  println(s"$numRuns runs took ${runsElapsed} ms")
 
-Os.exit(result)
+  return result
+}
+
+def report: Unit = {
+  if (Os.cliArgs.size != 2) {
+    println("Specify path to latex output file")
+    Os.exit(-1)
+  }
+  val outputFile = Os.path(Os.cliArgs(1))
+
+  def collect(index: Z, content: ISZ[ISZ[String]]): Z = {
+    var sum: Z = 0
+    for(c <- content) {
+      sum = sum + Z(c(index)).get
+    }
+    return sum / content.size
+  }
+
+  def allSame(index: Z, content: ISZ[ISZ[String]]): Unit = {
+    var last: Z = -1
+    for(c <- content) {
+      if (last == -1) {
+        last = Z(c(index)).get
+      } else {
+        assert (Z(c(index)).get == last)
+      }
+    }
+  }
+
+  var entries: ISZ[ST] = ISZ()
+  for (project <- projects.entries) {
+    println(s"Processing ${project._2.title} ...")
+    var rows: ISZ[ST] = ISZ()
+
+    val numRows = {
+      var i: Z = 2
+      for (c <- project._2.containers) {
+        i = i + c.expectedReports.entries.size
+      }
+      i
+    }
+    for (f <- project._2.containers) {
+      val csv = f.file.up / s".${f.file.name}.csv"
+      val lines = for (l <- csv.readLines) yield ops.StringOps(l).split(c => c == ',')
+      println(s"  $csv")
+
+      val entrypoints = f.expectedReports.keys.size
+
+      for (entryPoint <- f.expectedReports.keys) {
+        println(s"    $entryPoint")
+
+        val entries = ops.ISZOps(lines).filter(p => p(0) == entryPoint)
+        val cliTime = collect(1, entries)
+        val logikaTime = collect(2, entries)
+        val processBegin = collect(3, entries)
+        val processCheck = collect(4, entries)
+        val vcsNum = collect(5, entries)
+        allSame(5, entries)
+        val vcsTime = collect(6, entries)
+        val satNum = collect(7, entries)
+        allSame(7, entries)
+        val satTime = collect(8, entries)
+
+        //val numEntries = components * entrypoints
+        val eentryPoint = ops.StringOps(entryPoint).replaceAllLiterally("_", "\\_")
+        //println(s"      $cliTime $logikaTime $processBegin $processCheck $vcsNum $vcsTime $satNum $satTime")
+        val row = st"""& {\bf ${f.componentShortName}.${eentryPoint}} & $vcsNum & $satNum & $processBegin & $processCheck & $logikaTime \\
+                      |\cline{2-7}"""
+        rows = rows :+ row
+      }
+    }
+
+    val entry =
+      st"""\multirow{${rows.size}}{*}
+          |{\begin{sideways}{\sf ${project._2.title}}\end{sideways}}
+          |${(rows, "\n")}
+          |\hline
+          |"""
+    entries = entries :+ entry
+  }
+
+  val table =st"""\begin{table*}[t]
+                 |%\vspace*{-2mm}
+                 |{\scriptsize
+                 |  \begin{tabular}{|l|l|r|r|r|r|r|}
+                 |  \hline
+                 |  %\multicolumn{1}{>{\columncolor[gray]{0}}l}{\textcolor{white}{\bf System}}&
+                 |  \multicolumn{2}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf EntryPoint}} &
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf VC}} &
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf SAT}} &
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf VTime1}} &
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf VTime2}} &
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf TTime}}
+                 |  \\
+                 |  \hline
+                 |  ${(entries, "\n")}
+                 |  \end{tabular}
+                 |}
+                 |\caption{Experiment Data Excerpts}
+                 |\label{tab:data}
+                 |\end{table*}
+                 |"""
+  outputFile.writeOver(table.render)
+  println(s"Wrote $outputFile")
+}
+
+
+
+if (Os.cliArgs.isEmpty) {
+  println("Choose an option (run | report)")
+  Os.exit(0)
+}
+
+Os.cliArgs(0) match {
+  case string"run" => run
+  case string"report" => report
+  case _ => halt("Not a valid option")
+}
+
 
 def findMethod(key: String, f: Os.Path): Z = {
   assert(f.isFile, s"$f is not a file")
