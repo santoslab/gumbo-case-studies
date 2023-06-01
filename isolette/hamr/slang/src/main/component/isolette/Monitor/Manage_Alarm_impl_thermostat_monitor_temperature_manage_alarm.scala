@@ -45,19 +45,22 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     Contract(
       Requires(
         // BEGIN COMPUTE REQUIRES timeTriggered
-        // assume NanAssumes
-        //   Assume the port values are valid F32s
-        api.current_tempWstatus.value != F32.NaN &&
-          api.upper_alarm_temp.value != F32.NaN &&
-          api.lower_alarm_temp.value != F32.NaN,
-        // assume alarmRange
-        //   Assume the lower alarm is at least 1.0f less than the upper alarm
-        //   to account for the 0.5f tolerance
-        api.upper_alarm_temp.value - api.lower_alarm_temp.value > 1.0f,
-        // assume boundedValue
-        //   Appears to help SMT avoid inconsistent context.
-        -500.0f > api.upper_alarm_temp.value &&
-          api.upper_alarm_temp.value < 500.0f
+        // assume Figure_A_7
+        //   This is not explicitly stated in the requirements, but a reasonable
+        //   assumption is that the lower alarm must be at least 1.0f less than
+        //   the upper alarm in order to account for the 0.5f tolerance
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115
+        api.upper_alarm_temp.value - api.lower_alarm_temp.value >= 1.0f,
+        // assume Table_A_12_LowerAlarmTemp
+        //   Range [96..101]
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=112
+        96.0f <= api.lower_alarm_temp.value &&
+          api.lower_alarm_temp.value <= 101.0f,
+        // assume Table_A_12_UpperAlarmTemp
+        //   Range [97..102]
+        //   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=112
+        97.0f <= api.upper_alarm_temp.value &&
+          api.upper_alarm_temp.value <= 102.0f
         // END COMPUTE REQUIRES timeTriggered
       ),
       Modifies(lastCmd, api),
@@ -114,25 +117,17 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
 
     // -------------- Get values of input ports ------------------
 
-    val lowerAlarm: Isolette_Data_Model.Temp_impl =
-      api.get_lower_alarm_temp().get
+    val lowerAlarm: Isolette_Data_Model.Temp_impl = api.get_lower_alarm_temp().get
 
-    val upperAlarm: Isolette_Data_Model.Temp_impl =
-      api.get_upper_alarm_temp().get
+    val upperAlarm: Isolette_Data_Model.Temp_impl = api.get_upper_alarm_temp().get
 
-    val monitor_mode: Isolette_Data_Model.Monitor_Mode.Type =
-      api.get_monitor_mode().get
+    val monitor_mode: Isolette_Data_Model.Monitor_Mode.Type = api.get_monitor_mode().get
 
     val currentTemp: Isolette_Data_Model.TempWstatus_impl =
       api.get_current_tempWstatus().get
 
     // current command defaults to value of last command
     var currentCmd: Isolette_Data_Model.On_Off.Type = lastCmd
-
-    // use local options to reduce the resource limit, but also to increase the timeout
-    // for sat checking to be the same as for validity checking. This prevents Logika
-    // from exploring infeasible branches which can lead to an inconsistent context.
-    setOptions("Logika", """--par --par-branch --par-branch-mode all --rlimit 500000 --timeout 5 --sat-timeout --solver-sat cvc5""")
 
     monitor_mode match {
       case Isolette_Data_Model.Monitor_Mode.Init_Monitor_Mode =>
@@ -157,34 +152,6 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
     }
     lastCmd = currentCmd
     api.put_alarm_control(currentCmd)
-
-
-    // use assert/deduce blocks to help SMT deduce the ensures/post-conditions when not using
-    // Logika's use-real option
-
-    assert(( // REQ_MA_2
-      monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
-        (currentTemp.value < lowerAlarm.value | currentTemp.value > upperAlarm.value))
-      ->:
-      (lastCmd == Isolette_Data_Model.On_Off.Onn))
-
-    Deduce (
-      1 #> ((  // REQ_MA_3
-        api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
-          (api.current_tempWstatus.value >= api.lower_alarm_temp.value & api.current_tempWstatus.value <= api.upper_alarm_temp.value) &
-          (api.current_tempWstatus.value < api.lower_alarm_temp.value + 0.5f | api.current_tempWstatus.value > api.upper_alarm_temp.value - 0.5f))
-        ->:
-        (api.alarm_control == In(lastCmd) && lastCmd == In(lastCmd))) by Auto
-    )
-
-   Deduce (
-     1 #> ((  // REQ_MA_4
-       api.monitor_mode == Isolette_Data_Model.Monitor_Mode.Normal_Monitor_Mode &
-         (api.current_tempWstatus.value >= api.lower_alarm_temp.value & api.current_tempWstatus.value <= api.upper_alarm_temp.value) &
-         (api.current_tempWstatus.value >= api.lower_alarm_temp.value + 0.5f & api.current_tempWstatus.value <= api.upper_alarm_temp.value - 0.5f))
-       ->:
-       (api.alarm_control == Isolette_Data_Model.On_Off.Off & lastCmd == Isolette_Data_Model.On_Off.Off)) by Auto
-   )
   }
 
   def activate(api: Manage_Alarm_impl_Operational_Api): Unit = { }

@@ -45,57 +45,54 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
 
   /** Compute Entrypoint Contract
     *
-    * assumes NanAssumes
-    *   Assume the port values are valid F32s
-    * @param api_current_tempWstatus incoming data port
+    * assumes Figure_A_7
+    *   This is not explicitly stated in the requirements, but a reasonable
+    *   assumption is that the lower alarm must be at least 1.0f less than
+    *   the upper alarm in order to account for the 0.5f tolerance
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=115 
     * @param api_lower_alarm_temp incoming data port
     * @param api_upper_alarm_temp incoming data port
     */
-  @strictpure def compute_spec_NanAssumes_assume(
-      api_current_tempWstatus: Isolette_Data_Model.TempWstatus_impl,
+  @strictpure def compute_spec_Figure_A_7_assume(
       api_lower_alarm_temp: Isolette_Data_Model.Temp_impl,
       api_upper_alarm_temp: Isolette_Data_Model.Temp_impl): B =
-    api_current_tempWstatus.value != F32.NaN &&
-      api_upper_alarm_temp.value != F32.NaN &&
-      api_lower_alarm_temp.value != F32.NaN
+    api_upper_alarm_temp.value - api_lower_alarm_temp.value >= 1.0f
 
   /** Compute Entrypoint Contract
     *
-    * assumes alarmRange
-    *   Assume the lower alarm is at least 1.0f less than the upper alarm
-    *   to account for the 0.5f tolerance
+    * assumes Table_A_12_LowerAlarmTemp
+    *   Range [96..101]
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=112 
     * @param api_lower_alarm_temp incoming data port
-    * @param api_upper_alarm_temp incoming data port
     */
-  @strictpure def compute_spec_alarmRange_assume(
-      api_lower_alarm_temp: Isolette_Data_Model.Temp_impl,
-      api_upper_alarm_temp: Isolette_Data_Model.Temp_impl): B =
-    api_upper_alarm_temp.value - api_lower_alarm_temp.value > 1.0f
+  @strictpure def compute_spec_Table_A_12_LowerAlarmTemp_assume(
+      api_lower_alarm_temp: Isolette_Data_Model.Temp_impl): B =
+    96.0f <= api_lower_alarm_temp.value &&
+      api_lower_alarm_temp.value <= 101.0f
 
   /** Compute Entrypoint Contract
     *
-    * assumes boundedValue
-    *   Appears to help SMT avoid inconsistent context.
+    * assumes Table_A_12_UpperAlarmTemp
+    *   Range [97..102]
+    *   http://pub.santoslab.org/high-assurance/module-requirements/reading/FAA-DoT-Requirements-AR-08-32.pdf#page=112 
     * @param api_upper_alarm_temp incoming data port
     */
-  @strictpure def compute_spec_boundedValue_assume(
+  @strictpure def compute_spec_Table_A_12_UpperAlarmTemp_assume(
       api_upper_alarm_temp: Isolette_Data_Model.Temp_impl): B =
-    -500.0f > api_upper_alarm_temp.value &&
-      api_upper_alarm_temp.value < 500.0f
+    97.0f <= api_upper_alarm_temp.value &&
+      api_upper_alarm_temp.value <= 102.0f
 
   /** CEP-T-Assm: Top-level assume contracts for manage_alarm's compute entrypoint
     *
-    * @param api_current_tempWstatus incoming data port
     * @param api_lower_alarm_temp incoming data port
     * @param api_upper_alarm_temp incoming data port
     */
   @strictpure def compute_CEP_T_Assm (
-      api_current_tempWstatus: Isolette_Data_Model.TempWstatus_impl,
       api_lower_alarm_temp: Isolette_Data_Model.Temp_impl,
       api_upper_alarm_temp: Isolette_Data_Model.Temp_impl): B =
-    compute_spec_NanAssumes_assume(api_current_tempWstatus, api_lower_alarm_temp, api_upper_alarm_temp) &
-    compute_spec_alarmRange_assume(api_lower_alarm_temp, api_upper_alarm_temp) &
-    compute_spec_boundedValue_assume(api_upper_alarm_temp)
+    compute_spec_Figure_A_7_assume(api_lower_alarm_temp, api_upper_alarm_temp) &
+    compute_spec_Table_A_12_LowerAlarmTemp_assume(api_lower_alarm_temp) &
+    compute_spec_Table_A_12_UpperAlarmTemp_assume(api_upper_alarm_temp)
 
   /** CEP-Pre: Compute Entrypoint Pre-Condition for manage_alarm
     *
@@ -112,7 +109,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm_GumboX {
       api_monitor_mode: Isolette_Data_Model.Monitor_Mode.Type,
       api_upper_alarm_temp: Isolette_Data_Model.Temp_impl): B =
     (// CEP-Assm: assume clauses of manage_alarm's compute entrypoint
-     compute_CEP_T_Assm (api_current_tempWstatus, api_lower_alarm_temp, api_upper_alarm_temp))
+     compute_CEP_T_Assm (api_lower_alarm_temp, api_upper_alarm_temp))
 
   /** guarantees REQ_MA_1
     *   If the Monitor Mode is INIT, the Alarm Control shall be set
