@@ -123,8 +123,7 @@ object Manage_Alarm_impl_thermostat_monitor_temperature_manage_alarm {
 
     val monitor_mode: Isolette_Data_Model.Monitor_Mode.Type = api.get_monitor_mode().get
 
-    val currentTemp: Isolette_Data_Model.TempWstatus_impl =
-      api.get_current_tempWstatus().get
+    val currentTemp: Isolette_Data_Model.TempWstatus_impl = api.get_current_tempWstatus().get
 
     // current command defaults to value of last command
     var currentCmd: Isolette_Data_Model.On_Off.Type = lastCmd
