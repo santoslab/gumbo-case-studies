@@ -36,6 +36,8 @@ val isCi: B = Os.env("GITLAB_CI").nonEmpty || Os.env("GITHUB_ACTIONS").nonEmpty 
 val initialisePrefix = "initialise"
 val timeTriggeredPrefix = "timeTriggered"
 
+val nodes: ISZ[String] = ISZ("e2206hm02", "e2206hm03")
+
 @datatype class ExpectedReport(val expectedWarnings: ISZ[String],
                                val expectedErrors: ISZ[String])
 val emptyReport = ExpectedReport(ISZ(), ISZ())
@@ -74,7 +76,7 @@ val isolette = "isolette" ~>
 val rtsHome = home / "rts"
 val actuationDir = rtsHome / "hamr" / "slang" / "src" / "main" / "component" / "RTS" / "Actuation"
 val rts = "rts" ~>
-  Project(rtsHome, "RTS", "RTS", ISZ(
+  Project(rtsHome, "HARDENS RTS", "HARDENS RTS", ISZ(
     C("SaturationActuator", actuationDir / "Actuator_i_actuationSubsystem_saturationActuatorUnit_saturationActuator_actuator.scala", defaultOpts, periodicMap),
     C("TempPressureActuator", actuationDir / "Actuator_i_actuationSubsystem_tempPressureActuatorUnit_tempPressureActuator_actuator.scala", defaultOpts, periodicMap),
     C("AU1\\_PressureLogic", actuationDir / "CoincidenceLogic_i_actuationSubsystem_actuationUnit1_pressureLogic_coincidenceLogic.scala", defaultOpts, periodicMap),
@@ -104,7 +106,8 @@ val tcS = "tcSporadic" ~>
       sporadicMap + ("handle_fanAck" ~> emptyReport) + ("handle_setPoint" ~> emptyReport) + ("handle_tempChanged" ~> emptyReport)),
     C("TempSensor", tcSDir / "TempSensor" / "TempSensor_s_tcproc_tempSensor.scala", defaultOpts, periodicMap)))
 
-val projects: Map[String, Project] = Map.empty + isolette + rts + tcP + tcS
+//val projects: Map[String, Project] = Map.empty + isolette + rts + tcP + tcS
+val projects: Map[String, Project] = Map.empty[String, Project] + isolette + rts + tcS
 
 val systemVersion = "System Version"
 val compName = "Computer Name"
@@ -114,7 +117,7 @@ val memory = "Memory"
 
 val sysInfo = getSystemInfo
 
-def run: Z = {
+def run(): Z = {
 
   if (Os.cliArgs.size != 2) {
     println("Must specify the number of runs")
@@ -254,12 +257,17 @@ def run: Z = {
   return result
 }
 
-def report: Unit = {
-  if (Os.cliArgs.size != 2) {
-    println("Specify path to latex output file")
+def report(): Unit = {
+  if (Os.cliArgs.size != 3) {
+    println(s"Must specify node name (${nodes}) and the output filepath")
     Os.exit(-1)
   }
-  val outputFile = Os.path(Os.cliArgs(1))
+  if (!ops.ISZOps(nodes).contains(Os.cliArgs(1))) {
+    println(s"Not a valid node.  Choose from: ${nodes}")
+    Os.exit(-1)
+  }
+  val nodeName = Os.cliArgs(1)
+  val outputFile = Os.path(Os.cliArgs(2))
 
   def collect(index: Z, content: ISZ[ISZ[String]]): Z = {
     var sum: Z = 0
@@ -269,7 +277,7 @@ def report: Unit = {
     return sum / content.size
   }
 
-  def allSame(index: Z, content: ISZ[ISZ[String]]): Unit = {
+  def assertAllSame(index: Z, content: ISZ[ISZ[String]]): Unit = {
     var last: Z = -1
     for(c <- content) {
       if (last == -1) {
@@ -280,12 +288,20 @@ def report: Unit = {
     }
   }
 
+  val indices: ISZ[String] = ops.StringOps("entrypoint,cliTime,logikaTime,processBegin,processCheck,vcsNum,vcsTime,satNum,satTime,timeStamp,kekikianBuild,timeout,rlimit,par,par-branch,par-branch-mode,System Version,Computer Name,Model Identifier,Processor,Memory").split(c => c == ',')
+  def indexOf(s: String): Z = {
+    for(i <- 0 until indices.size if indices(i) == s) {
+      return i
+    }
+    halt("Infeasible: couldn't find $s")
+  }
+
   var entries: ISZ[ST] = ISZ()
   for (project <- projects.entries) {
     println(s"Processing ${project._2.title} ...")
     var rows: ISZ[ST] = ISZ()
 
-    val numRows = {
+    val numRows: Z = {
       var i: Z = 2
       for (c <- project._2.containers) {
         i = i + c.expectedReports.entries.size
@@ -294,7 +310,7 @@ def report: Unit = {
     }
     for (f <- project._2.containers) {
       val csv = f.file.up / s".${f.file.name}.csv"
-      val lines = for (l <- csv.readLines) yield ops.StringOps(l).split(c => c == ',')
+      val lines: ISZ[ISZ[String]] = for (l <- csv.readLines) yield ops.StringOps(l).split(c => c == ',')
       println(s"  $csv")
 
       val entrypoints = f.expectedReports.keys.size
@@ -302,24 +318,50 @@ def report: Unit = {
       for (entryPoint <- f.expectedReports.keys) {
         println(s"    $entryPoint")
 
-        val entries = ops.ISZOps(lines).filter(p => p(0) == entryPoint)
-        val cliTime = collect(1, entries)
-        val logikaTime = collect(2, entries)
-        val processBegin = collect(3, entries)
-        val processCheck = collect(4, entries)
-        val vcsNum = collect(5, entries)
-        allSame(5, entries)
-        val vcsTime = collect(6, entries)
-        val satNum = collect(7, entries)
-        allSame(7, entries)
-        val satTime = collect(8, entries)
+        val matches = ops.ISZOps(lines).filter(line =>
+          (line(indexOf("vcsNum")) != "0" || line(indexOf("satNum")) != "0") &&
+          line(indexOf("entrypoint")) == entryPoint && line(indexOf("Computer Name")) == nodeName)
 
-        //val numEntries = components * entrypoints
-        val eentryPoint = ops.StringOps(entryPoint).replaceAllLiterally("_", "\\_")
-        //println(s"      $cliTime $logikaTime $processBegin $processCheck $vcsNum $vcsTime $satNum $satTime")
-        val row = st"""& {\bf ${f.componentShortName}.${eentryPoint}} & $vcsNum & $satNum & $processBegin & $processCheck & $logikaTime \\
-                      |\cline{2-7}"""
-        rows = rows :+ row
+        if (matches.size > 0) {
+          val cliTime = collect(indexOf("cliTime"), matches)
+          val logikaTime = collect(indexOf("logikaTime"), matches)
+          val processBegin = collect(indexOf("processBegin"), matches)
+          val processCheck = collect(indexOf("processCheck"), matches)
+          val vcsNum = collect(indexOf("vcsNum"), matches)
+          assertAllSame(indexOf("vcsNum"), matches)
+          val vcsTime = collect(indexOf("vcsTime"), matches)
+          val satNum = collect(indexOf("satNum"), matches)
+          assertAllSame(indexOf("satNum"), matches)
+          val satTime = collect(indexOf("satTime"), matches)
+
+          //val numEntries = components * entrypoints
+          val eentryPoint = ops.StringOps(entryPoint).replaceAllLiterally("_", "\\_")
+          //println(s"      $cliTime $logikaTime $processBegin $processCheck $vcsNum $vcsTime $satNum $satTime")
+          val ttime = logikaTime
+          val itcTime = processBegin - processCheck
+          val vTime = processCheck
+          val componentName = s"${f.componentShortName}.${eentryPoint}"
+
+          def formatTime(s: Z): String = {
+            val cis = conversions.String.toCis(s.string)
+            var ret: ISZ[org.sireum.C] = ISZ()
+            for(ix <- cis.size - 1 to 0 by -1) {
+              ret = cis(ix) +: ret
+              if (ret.size == 3) {
+                ret = '.' +: ret
+              }
+            }
+            val r: String = conversions.String.fromCis(ret)
+            return if (ret.size == 2) s"0.0$r"
+            else if (ret.size == 3) s"0.$r"
+            else if (ret.size == 4) s"0$r"
+            else r
+          }
+          val row =
+            st"""& $componentName & $vcsNum & $satNum & ${formatTime(ttime)} & ${formatTime(itcTime)} & ${formatTime(vTime)} \\
+                |\cline{2-7}"""
+          rows = rows :+ row
+        }
       }
     }
 
@@ -341,15 +383,15 @@ def report: Unit = {
                  |  \multicolumn{2}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf EntryPoint}} &
                  |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf VC}} &
                  |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf SAT}} &
-                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf VTime1}} &
-                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf VTime2}} &
-                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf TTime}}
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf TTime}} &
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf ITCTime}} &
+                 |  \multicolumn{1}{>{\columncolor[gray]{0}}c}{\textcolor{white}{\bf VTime}}
                  |  \\
                  |  \hline
                  |  ${(entries, "\n")}
                  |  \end{tabular}
                  |}
-                 |\caption{Experiment Data Excerpts}
+                 |\caption{Experiment Data Excerpts ({\bf TTime}, {\bf ITCTime}, {\bf VTime} are in seconds)}
                  |\label{tab:data}
                  |\end{table*}
                  |"""
@@ -365,8 +407,8 @@ if (Os.cliArgs.isEmpty) {
 }
 
 Os.cliArgs(0) match {
-  case string"run" => run
-  case string"report" => report
+  case string"run" => run()
+  case string"report" => report()
   case _ => halt("Not a valid option")
 }
 
@@ -392,7 +434,7 @@ def getSystemInfo: Map[String, String] = {
 
     @strictpure def f(key: String): (String, String) = (key, ops.StringOps(ops.StringOps(info.filter(p => p(0) == key)(0)(1)).trim).replaceAllChars(',', '_'))
 
-    val processorVal =
+    val processorVal: String =
       if (Os.prop("os.arch").get == "aarch64") {
         val chip = f("Chip")
         val cores = f("Total Number of Cores")
