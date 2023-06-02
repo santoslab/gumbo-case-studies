@@ -10,7 +10,7 @@ object Temperature_i_GumboX {
   /** invariant AbsZero
     */
   @strictpure def AbsZero_Invariant(value: TempSensor.Temperature_i): B =
-    value.degrees >= GUMBO_Definitions.GUMBO__Library.absoluteZero()
+    GUMBO_Definitions.GUMBO__Library.aboveAbsoluteZero(value.degrees)
 
   /** D-Inv Data Invariant for TempSensor.Temperature_i
     */

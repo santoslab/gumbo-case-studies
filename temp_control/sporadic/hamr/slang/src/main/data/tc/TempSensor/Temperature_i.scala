@@ -17,7 +17,7 @@ object Temperature_i {
 @datatype class Temperature_i(
   val degrees: F32) {
   @spec def AbsZero = Invariant(
-    degrees >= GUMBO_Definitions.GUMBO__Library.absoluteZero()
+    GUMBO_Definitions.GUMBO__Library.aboveAbsoluteZero(degrees)
   )
 }
 

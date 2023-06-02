@@ -21,10 +21,10 @@ object TempControl_s_tcproc_tempControl_GumboX {
 
   /** Initialize Entrypoint Contract
     *
-    * guarantees defautSetPoint
+    * guarantees defaultSetPoint
     * @param currentSetPoint post-state state variable
     */
-  @strictpure def initialize_defautSetPoint (
+  @strictpure def initialize_defaultSetPoint (
       currentSetPoint: TempControlSoftwareSystem.SetPoint_i): B =
     currentSetPoint.low.degrees == 70.0f &&
       currentSetPoint.high.degrees == 80.0f
@@ -59,7 +59,7 @@ object TempControl_s_tcproc_tempControl_GumboX {
       currentSetPoint: TempControlSoftwareSystem.SetPoint_i,
       latestTemp: TempSensor.Temperature_i,
       api_fanCmd: Option[CoolingFan.FanCmd.Type]): B =
-    initialize_defautSetPoint(currentSetPoint) &
+    initialize_defaultSetPoint(currentSetPoint) &
     initialize_defaultFanStates(currentFanState) &
     initialize_defaultLatestTemp(latestTemp)
 

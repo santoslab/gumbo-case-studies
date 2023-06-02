@@ -36,7 +36,7 @@ object TempControl_s_tcproc_tempControl {
       ),
       Ensures(
         // BEGIN INITIALIZES ENSURES
-        // guarantee defautSetPoint
+        // guarantee defaultSetPoint
         currentSetPoint.low.degrees == 70.0f &&
           currentSetPoint.high.degrees == 80.0f,
         // guarantee defaultFanStates
