@@ -9,6 +9,8 @@ import org.sireum.message.Reporter
 
 object ReadmeGen extends App {
 
+  val runCodegen: B = T
+
   val gumboRootDir: Os.Path = {
     val c = Os.path(".").up.up.up
     if (!(c/ "isolette").exists || !(c / "rts").exists || !(c / "temp_control" / "sporadic").exists) {
@@ -20,6 +22,7 @@ object ReadmeGen extends App {
   @datatype class Project(val title: String,
                           val description: Option[String],
                           val projectRootDir: Os.Path,
+                          val aadlRootDir: Os.Path,
                           val air: Os.Path,
                           val configs: ISZ[Cli.SireumHamrCodegenOption]
                          )
@@ -32,6 +35,7 @@ object ReadmeGen extends App {
       title ="Temperature Control Sporadic",
       description = None(),
       projectRootDir = projRootDir,
+      aadlRootDir = defaultDirs.aadlDir,
       air = defaultDirs.json,
       configs = ISZ(Util.baseOptions(
         packageName = Some("tc"),
@@ -50,6 +54,7 @@ object ReadmeGen extends App {
       title = "Isolette",
       description = None(),
       projectRootDir = projRootDir,
+      aadlRootDir = defaultDirs.aadlDir,
       air = defaultDirs.json,
       configs = ISZ(Util.baseOptions(
         packageName = Some("isolette"),
@@ -68,6 +73,7 @@ object ReadmeGen extends App {
       title = "RTS",
       description = None(),
       projectRootDir = projRootDir,
+      aadlRootDir = defaultDirs.aadlDir,
       air = defaultDirs.json,
       configs = ISZ(Util.baseOptions(
         packageName = Some("RTS"),
@@ -88,6 +94,8 @@ object ReadmeGen extends App {
   def run(): Unit = {
     val reporter = Reporter.create
 
+    var reports: ISZ[Report] = ISZ()
+
     for(project <- projects) {
 
       for(config <- project.configs) {
@@ -96,9 +104,13 @@ object ReadmeGen extends App {
         println(s"${project.projectRootDir} -- ${config.platform})")
         println("***************************************")
 
-        org.sireum.cli.HAMR.codeGen(config, reporter)
+        if (runCodegen) {
+          org.sireum.cli.HAMR.codeGen(config, reporter)
+        }
 
-        println(reporter.hasError)
+        if (!reporter.hasError) {
+          reports = reports :+ Report.genReport(project, gumboRootDir, reporter)
+        }
 
         reporter.printMessages()
       }
