@@ -1,6 +1,6 @@
 # GUMBOX 2023 Case Studies
 
-## [Periodic Temperature Control](temp_control/periodic/readme.md)
+## [Temperature Control Sporadic](temp_control/sporadic/readme.md)
 
 
 ## [Isolette](isolette/readme.md)

@@ -12,6 +12,16 @@ import org.sireum.hamr.ir.{JSON, MsgPack}
 import org.sireum.message.Reporter
 
 object AadlModelUtil {
+  def getAadlArchDiagram(aadlRoot: Os.Path): Option[Os.Path] = {
+    if((aadlRoot / "diagrams" / "aadl-arch.svg").exists) {
+      return Some(aadlRoot / "diagrams" / "aadl-arch.svg")
+    } else if ((aadlRoot / "diagrams" / "aadl-arch.png").exists) {
+      return Some(aadlRoot / "diagrams" / "aadl-arch.png")
+    } else {
+      return None()
+    }
+  }
+
 
   def getModel(inputFile: Os.Path, isMsgpack: B): ir.Aadl = {
     val input: String = if (inputFile.exists && inputFile.isFile) {
