@@ -91,24 +91,6 @@
 
 ## <!--logika-title_start-->Logika<!--logika-title_end-->
 <!--logika-description_start-->
-<script type="text/javascript"
-  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_CHTML">
-</script>
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config({
-    tex2jax: {
-      inlineMath: [['$','$'], ['\\(','\\)']],
-      processEscapes: true},
-      jax: ["input/TeX","input/MathML","input/AsciiMath","output/CommonHTML"],
-      extensions: ["tex2jax.js","mml2jax.js","asciimath2jax.js","MathMenu.js","MathZoom.js","AssistiveMML.js", "[Contrib]/a11y/accessibility-menu.js"],
-      TeX: {
-      extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"],
-      equationNumbers: {
-      autoNumber: "AMS"
-      }
-    }
-  });
-</script>
 The following reports the experimental data obtained by running Logika
 only on the component entrypoints that require verification (e.g. TempControl's
 Fan component was excluded as it does not contain GUMBO contracts and does not
@@ -116,11 +98,11 @@ use datatypes that have invariants).  Logika was configured with a 2 second
 validity checking timeout, a 500 millisecond satisfiability checking timeout, a
 SMT2 resource limit of 2,000,000, and with full parallelization optimizations
 enabled.  The SMT2 solvers used include CVC4 1.8, CVC5 1.0.5, and Z3 4.12.2. The
-${\bf VC}$ and ${\bf SAT}$ columns report the number of verification and
+**VC** and **SAT** columns report the number of verification and
 satisfiability conditions that were checked, respectively.  The time values
 reported in the final three columns are the averages obtained after re-running
 Logika 25 times for each entrypoint on an M1 Mac Mini with 8 cores and 16 GB of
-RAM.  ${\bf TTime}$ gives the total number of seconds it took to run Logika
+RAM.  **TTime** gives the total number of seconds it took to run Logika
 from the command line on the Slang project containing the entrypoint (i.e. it
 includes the verification time along with the time required for parsing, type
 checking, etc.).
@@ -135,8 +117,8 @@ re-running Logika on the timeTriggered entrypoint then Sireum's incremental type
 checking will only need to recheck MA (and any of its dependents) resulting in
 an average delay of only 0.214 seconds before verification can proceed. The
 results of these optimizations are reported in the Incremental-Type Checking
-column (${\bf ITCTime}$).  The time required to actually verify an entrypoint with
-a clean cache is reported in the Verification-Time column (${\bf VTime}$) so
+column (**ITCTime**).  The time required to actually verify an entrypoint with
+a clean cache is reported in the Verification-Time column (**VTime**) so
 incremental type checking for this example would save 2.268 seconds (2.482 -
 0.214) on average.
 <!--logika-description_end-->
